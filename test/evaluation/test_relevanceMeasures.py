@@ -7,7 +7,7 @@ import unittest
 import pandas as pd
 import numpy as np
 import uuid
-from evaluation.relevanceMeasures import pak
+from faim.evaluation.compas import evaluateModelPerformanceAndErrorRates
 
 
 class Test(unittest.TestCase):
@@ -31,7 +31,7 @@ class Test(unittest.TestCase):
         origIDs = self._origData["uuid"].values
 
         for k in np.arange(self._dataSize):
-            self.assertEqual(1, pak(k + 1, fairIDs, origIDs), "failed at k={0}".format(k))
+            self.assertEqual(1, evaluateModelPerformanceAndErrorRates(k + 1, fairIDs, origIDs), "failed at k={0}".format(k))
 
     def test_pak_invertedOrder(self):
         # all items in origData and fairData are ordered in reverse way
@@ -68,7 +68,7 @@ class Test(unittest.TestCase):
 
         actualPak = np.empty(self._dataSize)
         for k in np.arange(self._dataSize):
-            actualPak[k] = pak(k + 1, fairIDs, origIDs)
+            actualPak[k] = evaluateModelPerformanceAndErrorRates(k + 1, fairIDs, origIDs)
 
         np.testing.assert_array_equal(expectedPak, actualPak)
 
@@ -87,7 +87,7 @@ class Test(unittest.TestCase):
         origIDs = self._origData["uuid"].values
 
         for k in np.arange(self._dataSize):
-            self.assertEqual(1, pak(k + 1, fairIDs, origIDs), "failed at k={0}".format(k))
+            self.assertEqual(1, evaluateModelPerformanceAndErrorRates(k + 1, fairIDs, origIDs), "failed at k={0}".format(k))
 
     def test_pak_invertedOrderSameScores(self):
         # all items in origData and fairData are ordered in reverse way
@@ -129,7 +129,7 @@ class Test(unittest.TestCase):
 
         actualPak = np.empty(self._dataSize)
         for k in np.arange(self._dataSize):
-            actualPak[k] = pak(k + 1, fairIDs, origIDs)
+            actualPak[k] = evaluateModelPerformanceAndErrorRates(k + 1, fairIDs, origIDs)
 
         np.testing.assert_array_equal(expectedPak, actualPak)
 

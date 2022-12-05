@@ -7,7 +7,7 @@ import pytest
 import unittest
 import pandas as pd
 import numpy as np
-from util import util
+from faim.util import util
 
 
 class Test(unittest.TestCase):

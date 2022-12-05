@@ -7,7 +7,7 @@ import unittest
 import pandas as pd
 import numpy as np
 from copy import deepcopy
-from algorithm import fia
+from faim.algorithm import fia
 import pytest
 
 DATA = [
