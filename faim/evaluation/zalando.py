@@ -5,7 +5,6 @@ from functools import wraps
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import sklearn.metrics as skmetr
 
 
@@ -108,6 +107,11 @@ def performanceAndErrorRates(df: pd.DataFrame, predictedLabel):
 
 
 def plotRankings(data, pathToResult):
+    try:
+        import plotly.express as px
+    except ImportError as err:
+        raise ImportError("plotly must be installed to run this function")
+
     data.loc[ data["group"] == 0, "group"] = "high"
     data.loc[ data["group"] == 1, "group"] = "low"
     def log_step(func):
