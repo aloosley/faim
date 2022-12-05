@@ -1,41 +1,56 @@
 # FAIM
 
-Implementation of the post-processing algorithm and experiments described in
+FAIM (FAir Interpolation Method), described in 
+[Beyond Incompatibility: Interpolation between Mutually
+Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/2212.00469)
+is a post-processing algorithm for achieving a combination of group-fairness criteria 
+(equalized false postive rates, equalized false negative rates, group calibration).
 
-## Install
-Ensure you have a environment with Python>=3.7 and pip>=2.21.
+[this page is under contruction]
 
+## Installation
+
+### Environment
+Ensure you have a environment with Python>=3.7 and pip>=2.21, preferably by creating a virtual environment.
+
+One way to do this is using [miniconda](https://docs.conda.io/en/latest/miniconda.html).  Install miniconda following
+the instructions on [this page](https://docs.conda.io/en/latest/miniconda.html) 
+and create a python 3.10 environment:
+
+```bash
+conda create -n faim python=3.10
+```
+
+Activate the environment
+```bash
+conda activate faim
+```
+
+Check that versions of python are >=3.7 and >=2.21, respectively: 
 ```bash
 python --version
 pip --version
 ```
-(Note, you may need to use commands `python3` or `pip3` if you're running system python)
 
-To install the package for usage purposes (as opposed to development purposes):
+### Python Package
+To install the package, go to the root directory of this repository and run
 ```bash
 pip install .
 ```
 
-To develop and experiment, use the following command to install the package as editable with extra development and
-experiment requirements:
-```bash
-pip install -e ".[dev,experiment]"
-```
+[In the future, users will be able to simply run `pip install faim`]
 
-Don't confuse the `[]` to mean optional.  The `[dev,experiment]` notation tells pip to install extra
-"dev" and "experiment" requirements including things like `pytest`, `pre-commit`, `jupyter`, and so on.
 
-When developing, you can also install pre-commit hooks, which will run a set of tools at commit and push time:
-```bash
-pre-commit install
-```
+## Usage 
+Installing faim also (currently) installs one command line interface (CLI) tool, `faim-experiment` which can be
+used to reproduce the work in the paper.  
 
-## Usage (needs rewrite once we are done)
+[A general API will added soon] 
 
 ### Create Datasets
-The code supports two datasets so far (see main() in main.py):
-* ``continuous-kleinberg --create synthetic``
-* ``continuous-kleinberg --create lsat``
+The code supports three datasets so far:
+* ``faim-experiment --create synthetic``
+* ``faim-experiment --create lsat``
 
 The synthetic dataset contains 2 protected feature columns and 1 score column. One protected feature is binary {0, 1}, the other is drawn from the set {0, 1, 2}, leading to a total of 6 groups (0 0), (0 1), (0 2) etc. The score feature represents the number, that would be calculated by a ranking function. Each group is assigned a in integer score within [1,100], drawn from a normal distribution with different means and standard-deviations per group (see data/synthetic/scoreDistributionPerGroup.png)
 
@@ -73,4 +88,21 @@ Running the evaluation requires the following terminal arguments: dataset name, 
 From the environment where you installed the package, run
 ```bash
 pip uninstall faim
+```
+
+## Development and Contribution
+Contributions are welcome. 
+
+### Development Environment
+To develop, use the following command to install the package as editable with extra dev requirements:
+```bash
+pip install -e ".[dev]"
+```
+
+Don't confuse the `[]` to mean optional.  The `".[dev]"` notation tells pip to install extra
+"dev" requirements including things like `pytest`, `pre-commit`, and so on.
+
+Please be sure to install (and use) our [pre-commit](https://pre-commit.com/) hooks:
+```bash
+pre-commit install
 ```
