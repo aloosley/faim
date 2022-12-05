@@ -4,7 +4,7 @@
 
 FAIM (FAir Interpolation Method), described in
 [Beyond Incompatibility: Interpolation between Mutually
-Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/2212.00469)
+Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/2212.00469),
 is a post-processing algorithm for achieving a combination of group-fairness criteria
 (equalized false postive rates, equalized false negative rates, group calibration).
 
