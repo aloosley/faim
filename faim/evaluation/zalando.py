@@ -1,17 +1,12 @@
-from collections import defaultdict
-import numpy as np
-import pandas as pd
-import sklearn.metrics as skmetr
-import os
 import datetime as dt
+import os
+from collections import defaultdict
 from functools import wraps
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.express as px
-
+import sklearn.metrics as skmetr
 
 
 def evaluate(data, pathToResult, filename="eval.txt"):
