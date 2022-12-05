@@ -5,7 +5,8 @@ protected attributes: sex, race, age
 scores: decile_score
 
 """
-import os
+from pathlib import Path
+
 import pandas as pd
 
 from faim.visualization.plots import plotKDEPerGroup
@@ -14,25 +15,28 @@ from faim.visualization.plots import plotKDEPerGroup
 class CompasCreator:
     # TODO: Do we want to run experiments with violent recidivism, too?
 
-    def __init__(self, pathToDataFile):
-        # prepare dataset as ProPublica did (see https://github.com/propublica/compas-analysis/blob/master/Compas%20Analysis.ipynb)
-        self.__origDataset = pd.read_csv(pathToDataFile)
-        print(self.__origDataset.shape)
-        self.__origDataset = self.__origDataset.drop(
-            self.__origDataset[self.__origDataset.days_b_screening_arrest > 30].index
-        )
-        self.__origDataset = self.__origDataset.drop(
-            self.__origDataset[self.__origDataset.days_b_screening_arrest < -30].index
-        )
-        self.__origDataset = self.__origDataset.drop(self.__origDataset[self.__origDataset.is_recid == -1].index)
-        self.__origDataset = self.__origDataset.drop(
-            self.__origDataset[self.__origDataset.c_charge_degree == "O"].index
-        )
-        self.__origDataset = self.__origDataset.drop(self.__origDataset[self.__origDataset.score_text == "N/A"].index)
-        print(self.__origDataset.shape)
+    def __init__(self, data_filepath: Path, output_dir: Path) -> None:
+        self.data_filepath = data_filepath
+        self.output_dir = output_dir
 
-    def prepareGenderData(self, writingPath):
-        keepCols = [
+        # prepare dataset as ProPublica did (see https://github.com/propublica/compas-analysis/blob/master/Compas%20Analysis.ipynb)
+        self.__dataset: pd.DataFrame = pd.read_csv(data_filepath)
+        print(self.__dataset.shape)
+        self.__dataset = self.__dataset.drop(
+            self.__dataset[self.__dataset.days_b_screening_arrest > 30].index
+        )
+        self.__dataset = self.__dataset.drop(
+            self.__dataset[self.__dataset.days_b_screening_arrest < -30].index
+        )
+        self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.is_recid == -1].index)
+        self.__dataset = self.__dataset.drop(
+            self.__dataset[self.__dataset.c_charge_degree == "O"].index
+        )
+        self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.score_text == "N/A"].index)
+        print(self.__dataset.shape)
+
+    def prepare_gender_data(self) -> None:
+        keep_cols = [
             "id",
             "sex",
             "decile_score",
@@ -41,7 +45,7 @@ class CompasCreator:
             "c_charge_degree",
             "priors_count",
         ]
-        data = self.__origDataset[keepCols].copy()
+        data = self.__dataset[keep_cols].copy()
 
         print(data["sex"].value_counts(normalize=True))
 
@@ -55,15 +59,21 @@ class CompasCreator:
                 "two_year_recid": "groundTruthLabel",
             }
         )
+
+        output_dir = self.output_dir / "gender"
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
+
         plotKDEPerGroup(
             data,
             {0: "Male", 1: "Female"},
             "pred_score",
-            os.path.join(writingPath, "dataPlot_sex.png"),
+            output_dir / "dataPlot_sex.png",
         )
-        data.to_csv(os.path.join(writingPath, "data.csv"), index=False, header=True)
+        data.to_csv(output_dir / "data.csv", index=False, header=True)
+        print(f"compas data grouped by gender output to '{output_dir}'")
 
-    def prepareRaceData(self, writingPath):
+    def prepare_race_data(self) -> None:
         keepCols = [
             "id",
             "race",
@@ -73,7 +83,7 @@ class CompasCreator:
             "c_charge_degree",
             "priors_count",
         ]
-        data = self.__origDataset[keepCols].copy()
+        data = self.__dataset[keepCols].copy()
 
         data["race"] = data["race"].replace(to_replace="Caucasian", value=0)
         data["race"] = data["race"].replace(to_replace="African-American", value=1)
@@ -91,15 +101,21 @@ class CompasCreator:
                 "two_year_recid": "groundTruthLabel",
             }
         )
+
+        output_dir = self.output_dir / "race"
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
+
         plotKDEPerGroup(
             data,
             {0: "Caucasian", 1: "Afr.-Amer.", 2: "Hispanic", 3: "Other"},
             "pred_score",
-            os.path.join(writingPath, "dataPlot_race.png"),
+            output_dir / "dataPlot_race.png",
         )
-        data.to_csv(os.path.join(writingPath, "data.csv"), index=False, header=True)
+        data.to_csv(output_dir / "data.csv", index=False, header=True)
+        print(f"compas data grouped by race output to '{output_dir}'")
 
-    def prepareAgeData(self, writingPath):
+    def prepare_age_data(self) -> None:
         keepCols = [
             "id",
             "age_cat",
@@ -109,7 +125,7 @@ class CompasCreator:
             "c_charge_degree",
             "priors_count",
         ]
-        data = self.__origDataset[keepCols].copy()
+        data = self.__dataset[keepCols].copy()
 
         print(data["age_cat"].value_counts(normalize=True))
 
@@ -124,10 +140,16 @@ class CompasCreator:
                 "two_year_recid": "groundTruthLabel",
             }
         )
+
+        output_dir = self.output_dir / "age"
+        if not output_dir.exists():
+            output_dir.mkdir(parents=True)
+
         plotKDEPerGroup(
             data,
             {0: "$> 45$", 1: "$25 - 45$", 2: "$< 25$"},
             "pred_score",
-            os.path.join(writingPath, "dataPlot_age.png"),
+            output_dir/ "dataPlot_age.png",
         )
-        data.to_csv(os.path.join(writingPath, "data.csv"), index=False, header=True)
+        data.to_csv(output_dir / "data.csv", index=False, header=True)
+        print(f"compas data grouped by age output to '{output_dir}'")

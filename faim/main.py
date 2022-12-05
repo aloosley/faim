@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from time import process_time
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -16,28 +17,37 @@ from faim.data_preparation.zalando import ZalandoDataset
 from faim.visualization.plots import plotScoreKDEsPerGroup
 
 
-def createSyntheticData(size, groupNames):
-    creator = SyntheticDatasetCreator(size, len(groupNames))
+DATA_TOP_DIR = Path(__file__).parent.parent / "data"
+
+# ToDo: Add CLI parameter for output dir instead of hard-coding
+OUTPUT_DIR = Path(".") / "prepared-data"
+
+
+def create_synthetic_data(size: int, group_names: Dict[int, str]):
+    creator = SyntheticDatasetCreator(size, len(group_names))
     creator.createTwoCorrelatedNormalDistributionScores()
     creator.sortByColumn("pred_score")
     creator.setDecisionBoundaryAsMean("true_score", "pred_score")
 
     # create subdir structure
-    groupStr = str(len(groupNames)) + "groups/"
+    groupStr = str(len(group_names)) + "groups/"
     timestampStr = datetime.today().strftime("%Y-%m-%d")
-    dataDir = os.path.join(*(["data", "synthetic", groupStr, timestampStr]))
-    Path(dataDir).mkdir(parents=True, exist_ok=True)
+
+    output_dir = OUTPUT_DIR / "synthetic" / groupStr / timestampStr
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True)
 
     # store
-    creator.writeToCSV(os.path.join(dataDir, "dataset.csv"))
+    creator.writeToCSV(output_dir / "dataset.csv")
     plotScoreKDEsPerGroup(
         creator.dataset,
-        np.arange(len(groupNames)),
+        np.arange(len(group_names)),
         ["true_score", "pred_score"],
         creator.boundary,
-        os.path.join(dataDir, "trueAndPredictedScoreDistributionPerGroup.png"),
-        groupNames,
+        output_dir / "trueAndPredictedScoreDistributionPerGroup.png",
+        group_names,
     )
+    print(f"synthetic data output to '{output_dir}'")
 
 
 def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_score, group_names, regForOT):
@@ -112,12 +122,15 @@ def main():
     args = parser.parse_args()
 
     if args.create == ["synthetic"]:
-        createSyntheticData(100000, {0: "privileged", 1: "disadvantaged"})
+        create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
     elif args.create == ["compas"]:
-        compasPreps = CompasCreator("data/compas/compas_two_years.csv")
-        compasPreps.prepareGenderData("data/compas/gender/")
-        compasPreps.prepareRaceData("data/compas/race/")
-        compasPreps.prepareAgeData("data/compas/age/")
+        compasPreps = CompasCreator(
+            data_filepath=DATA_TOP_DIR / "compas" / "compas_two_years.csv",
+            output_dir=Path(".") / "prepared-data" / "compas"
+        )
+        compasPreps.prepare_gender_data()
+        compasPreps.prepare_race_data()
+        compasPreps.prepare_age_data()
     elif args.create == ["zalando"]:
         ZalandoDataset(input_file="data/zalando/raw-data.csv", output_path="data/zalando/")
     elif args.run:
