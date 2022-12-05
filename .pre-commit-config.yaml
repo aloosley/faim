@@ -1,0 +1,84 @@
+---
+minimum_pre_commit_version: 2.20.0
+fail_fast: true
+default_stages: [ commit ]
+repos:
+  # meta
+
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+
+  # formatters
+
+  - repo: https://github.com/ambv/black
+    rev: 22.3.0
+    hooks:
+      - id: black
+
+  # tests
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        types: [ python ]
+        pass_filenames: false  # or use with: require_serial
+        stages: [ push ]
+
+#  - repo: https://github.com/PyCQA/pydocstyle
+#    rev: 6.1.1
+#    hooks:
+#      - id: pydocstyle
+#        args: [ "--ignore=D10,D21" ]
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.26.3
+    hooks:
+      - id: yamllint
+        args: [ "--strict", "-d", "{rules: {line-length: {max: 180}}}" ]
+        #
+
+  # miscellaneous
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.2.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-docstring-first
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: detect-private-key
+
+#  - repo: https://gitlab.com/pycqa/flake8
+#    rev: 3.9.2
+#    hooks:
+#      - id: flake8
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.9.0
+    hooks:
+      #      - id: rst-backticks
+      - id: python-use-type-annotations
+      - id: python-no-log-warn
+      - id: python-no-eval
+      - id: python-check-mock-methods
+      - id: python-check-blanket-noqa
+
+  # linters
+#
+#  - repo: local
+#    hooks:
+#      - id: mypy
+#        name: mypy
+#        entry: mypy -p continuous_kleinberg --strict --pretty --show-error-codes --namespace-packages
+#        types: [ python ]
+#        language: system
+#        pass_filenames: false
+#        require_series: true
