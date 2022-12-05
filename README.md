@@ -1,4 +1,4 @@
-[![Build & Test](https://github.com/MilkaLichtblau/faim/actions/workflows/python-build-test.yml/badge.svg)](https://github.com/MilkaLichtblau/faim/actions/workflows/python-build-test.yml)
+[![Build & Test](https://github.com/MilkaLichtblau/faim/actions/workflows/python-build-test.yaml/badge.svg)](https://github.com/MilkaLichtblau/faim/actions/workflows/python-build-test.yaml)
 
 # FAIM
 
