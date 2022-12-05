@@ -117,5 +117,5 @@ Don't confuse the `[]` to mean optional.  The `".[experiment, dev]"` notation te
 
 Please be sure to install (and use) our [pre-commit](https://pre-commit.com/) hooks:
 ```bash
-pre-commit install
+pre-commit install -t pre-commit -t pre-push
 ```
