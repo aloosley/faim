@@ -8,7 +8,7 @@ scores: decile_score
 import os
 import pandas as pd
 
-from continuous_kleinberg.visualization.plots import plotKDEPerGroup
+from faim.visualization.plots import plotKDEPerGroup
 
 
 class CompasCreator:

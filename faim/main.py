@@ -8,12 +8,12 @@ from time import process_time
 import numpy as np
 import pandas as pd
 
-from continuous_kleinberg import evaluation
-from continuous_kleinberg.algorithm.fia import FairnessInterpolationAlgorithm
-from continuous_kleinberg.data_preparation.compas import CompasCreator
-from continuous_kleinberg.data_preparation.synthetic import SyntheticDatasetCreator
-from continuous_kleinberg.data_preparation.zalando import ZalandoDataset
-from continuous_kleinberg.visualization.plots import plotScoreKDEsPerGroup
+from faim import evaluation
+from faim.algorithm.fia import FairnessInterpolationAlgorithm
+from faim.data_preparation.compas import CompasCreator
+from faim.data_preparation.synthetic import SyntheticDatasetCreator
+from faim.data_preparation.zalando import ZalandoDataset
+from faim.visualization.plots import plotScoreKDEsPerGroup
 
 
 def createSyntheticData(size, groupNames):

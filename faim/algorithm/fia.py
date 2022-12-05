@@ -7,8 +7,8 @@ import numpy as np
 import ot
 import pandas as pd
 
-from continuous_kleinberg.util.util import normalizeRowsToOne, scoresByGroup
-from continuous_kleinberg.visualization.plots import plotScoreHistsPerGroup
+from faim.util.util import normalizeRowsToOne, scoresByGroup
+from faim.visualization.plots import plotScoreHistsPerGroup
 
 DEBUG_SA = 0
 DEBUG_SIGMA = 1

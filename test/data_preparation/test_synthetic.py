@@ -1,6 +1,6 @@
 import unittest
 
-from continuous_kleinberg.data_preparation import synthetic
+from faim.data_preparation import synthetic
 
 
 class TestSyntheticDatasetCreator(unittest.TestCase):

@@ -72,5 +72,5 @@ Running the evaluation requires the following terminal arguments: dataset name, 
 ## Uninstall
 From the environment where you installed the package, run
 ```bash
-pip uninstall continuous_kleinberg
+pip uninstall faim
 ```

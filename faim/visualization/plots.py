@@ -1,6 +1,6 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from continuous_kleinberg.util import util
+from faim.util import util
 import numpy as np
 
 
