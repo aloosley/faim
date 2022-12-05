@@ -22,16 +22,10 @@ class CompasCreator:
         # prepare dataset as ProPublica did (see https://github.com/propublica/compas-analysis/blob/master/Compas%20Analysis.ipynb)
         self.__dataset: pd.DataFrame = pd.read_csv(data_filepath)
         print(self.__dataset.shape)
-        self.__dataset = self.__dataset.drop(
-            self.__dataset[self.__dataset.days_b_screening_arrest > 30].index
-        )
-        self.__dataset = self.__dataset.drop(
-            self.__dataset[self.__dataset.days_b_screening_arrest < -30].index
-        )
+        self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.days_b_screening_arrest > 30].index)
+        self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.days_b_screening_arrest < -30].index)
         self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.is_recid == -1].index)
-        self.__dataset = self.__dataset.drop(
-            self.__dataset[self.__dataset.c_charge_degree == "O"].index
-        )
+        self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.c_charge_degree == "O"].index)
         self.__dataset = self.__dataset.drop(self.__dataset[self.__dataset.score_text == "N/A"].index)
         print(self.__dataset.shape)
 
@@ -149,7 +143,7 @@ class CompasCreator:
             data,
             {0: "$> 45$", 1: "$25 - 45$", 2: "$< 25$"},
             "pred_score",
-            output_dir/ "dataPlot_age.png",
+            output_dir / "dataPlot_age.png",
         )
         data.to_csv(output_dir / "data.csv", index=False, header=True)
         print(f"compas data grouped by age output to '{output_dir}'")

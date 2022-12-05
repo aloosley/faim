@@ -106,15 +106,7 @@ class FairnessInterpolationAlgorithm:
         self.__regForOT = regForOT
 
     def __plott(
-        self,
-        dataframe,
-        filename,
-        xLabel="",
-        yLabel="",
-        xTickLabels=None,
-        yMin=None,
-        yMax=None,
-        isTransportMap=False
+        self, dataframe, filename, xLabel="", yLabel="", xTickLabels=None, yMin=None, yMax=None, isTransportMap=False
     ):
         # FIXME: move this to visualization package?
         mpl.rcParams.update(
@@ -134,7 +126,7 @@ class FairnessInterpolationAlgorithm:
         if isTransportMap:
             # plot identity line
             identityCol = pd.Series(np.linspace(0, 1, num=len(dataframe.index)))
-            identityCol.plot.line(color='grey', linestyle='dashed')
+            identityCol.plot.line(color="grey", linestyle="dashed")
         # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
         #           labels=self.__groups)
         ax.set_xlabel(xLabel)
@@ -238,7 +230,7 @@ class FairnessInterpolationAlgorithm:
                 xTickLabels=self.__binEdges[:-1].round(decimals=2),
                 yMin=0,
                 yMax=1,
-                isTransportMap=True
+                isTransportMap=True,
             )
 
         return fairScoreTranslationPerGroup
@@ -277,7 +269,7 @@ class FairnessInterpolationAlgorithm:
                 [newScores_colName, self.__predScoreTruncated],
                 os.path.join(self.__plotPath, newScores_colName + "DistributionPerGroup.png"),
                 self.__groups,
-                xTickLabels=roundedFairEdges
+                xTickLabels=roundedFairEdges,
             )
             # plot new scores for true positives and true negatives
             mask = raw["groundTruthLabel"] == 1

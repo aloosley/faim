@@ -95,12 +95,7 @@ def plotScoreHistsPerGroup(data, binArray, scoreNames, filename, groups, xTickLa
         for i, col in enumerate(scoresPerGroup.columns):
             if "truncated" in attr:
                 scoresPerGroup[col].plot(
-                    kind="hist",
-                    ax=ax,
-                    bins=origBinEdges,
-                    color=cmap(i),
-                    alpha=0.5,
-                    xticks=binArray
+                    kind="hist", ax=ax, bins=origBinEdges, color=cmap(i), alpha=0.5, xticks=binArray
                 )
             else:
                 scoresPerGroup[col].plot(
