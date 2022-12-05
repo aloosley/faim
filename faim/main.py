@@ -132,7 +132,7 @@ def main():
         compasPreps.prepare_race_data()
         compasPreps.prepare_age_data()
     elif args.create == ["zalando"]:
-        ZalandoDataset(input_file=DATA_TOP_DIR / "zalando/raw-data.csv", output_path=OUTPUT_DIR / "zalando")
+        ZalandoDataset(input_filepath=DATA_TOP_DIR / "zalando/raw-data.csv", output_dir=OUTPUT_DIR / "zalando")
     elif args.run:
         score_stepsize = float(args.run[1])
         # FIXME: thetas are given as np matrix in same order of group names that are defined below, because I did not find a way to pass them as

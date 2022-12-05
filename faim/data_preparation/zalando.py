@@ -4,7 +4,7 @@ import pandas as pd
 
 
 class ZalandoDataset:
-    def __init__(self, input_filepath: Path, output_dir: Path):
+    def __init__(self, input_filepath: Path, output_dir: Path) -> None:
         raw = pd.read_csv(input_filepath)
         cols = ["group", "groundTruthLabel", "pred_score"]
         df = raw.rename(columns={"raw_score": "pred_score", "label": "groundTruthLabel"})[cols]
