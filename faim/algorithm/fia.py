@@ -28,7 +28,7 @@ class FairnessInterpolationAlgorithm:
     With these weights, the predicted scores are transformed into a fairer representation, which meets
     criterion A, B and C as per given weight, by use of displacement interpolation per group.
 
-    See https://arxiv.org/abs/xxx for details.
+    See https://arxiv.org/abs/2212.00469 for details.
     """
 
     def __init__(
