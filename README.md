@@ -51,32 +51,27 @@ From the environment where you installed the package, run
 pip uninstall faim
 ```
 
-
 ## Usage
 Installing faim also (currently) installs one command line interface (CLI) tool, `faim-experiment` which can be
 used to reproduce the work in the paper.
 
-[A general API will added soon]
+[A general API will be added soon]
 
 ### Experiments
-#### Datasets
-The CLI can be used to prepare the three datasets found in the paper:
+This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).
+
+Ensure the package has been installed with `[experiment]` extra requirements before continuing
+(see [Installation | Python Package](#python-package))!
+
+#### Prepare Data
+The CLI can be used to prepare any of the three datasets used in the [paper](https://arxiv.org/abs/2212.00469):
 ```bash
-faim-experiment --create <dataset>
+faim-experiment --create DATASET
 ```
-where `<dataset>` is one of:
-1. synthetic
-2. compas
-3. zalando
-
-(see [paper](https://arxiv.org/abs/2212.00469) for more information).
-
-##### Synthetic Dataset
-The synthetic dataset contains 2 protected feature columns and 1 score column.
-One protected feature is binary {0, 1}, the other is drawn from the set {0, 1, 2},
-leading to a total of 6 groups (0 0), (0 1), (0 2) etc. The score feature represents the number,
-that would be calculated by a ranking function. Each group is assigned a in integer score within [1,100],
-drawn from a normal distribution with different means and standard-deviations per group.
+where `DATASET` is one of:
+* `synthetic`
+* `compas`
+* `zalando` [waiting for permission to release, contact us for more information]
 
 #### Run Experiment
 
@@ -85,24 +80,15 @@ For each dataset the aforementioned group description csv file is needed. It is 
 Running the CFA requires the following parameters: dataset name, the lowest and highest score value, the step size between two consecutive score values, a theta value for each group, and a path where the results are stored
 
 Examples for the synthetic dataset:
-* ``continuous-kleinberg --run synthetic 1,100 1 0,0,0,0,0,0 ../data/synthetic/results/theta=0/``
-* ``continuous-kleinberg --run synthetic 1,100 1 1,1,1,1,1,1 ../data/synthetic/results/theta=1/``
+* ``faim-experiment --run synthetic 1,100 1 0,0,0,0,0,0 ../data/synthetic/results/theta=0/``
+* ``faim-experiment --run synthetic 1,100 1 1,1,1,1,1,1 ../data/synthetic/results/theta=1/``
 
-Example for LSAT with gender as protected feature:
-* ``continuous-kleinberg --run lsat_gender 11,48 1 0,0 ../data/LSAT/gender/results/theta=0/``
-
-Example for LSAT with race as protected feature:
-* ``continuous-kleinberg --run lsat_race 11,48 1 1,1,1,1,1,1,1,1 ../data/LSAT/allRace/results/theta=1/``
-
-
-#### Visualize Data and Results
+#### Visualize Results
 Evaluates relevance and fairness changes for a given experiment and plots the results. Relevance is evaluated in terms of NDCG and Precision@k. Fairness is evaluated in terms of percentage of protected candidates at position k.
 
 Running the evaluation requires the following terminal arguments: dataset name, path to original dataset (before post-processing with CFA), path to result dataset (after applying the CFA). The evaluation files are stored in the same directory as the result dataset.
 
-* ``continuous-kleinberg --evaluate synthetic ../data/synthetic/dataset.csv ../data/synthetic/results/theta=0/resultData.csv``
-* ``continuous-kleinberg --evaluate lsat_race ../data/LSAT/allRace/allEthnicityLSAT.csv ../data/LSAT/allRace/results/theta=0/resultData.csv``
-* ``continuous-kleinberg --evaluate lsat_gender ../data/LSAT/gender/genderLSAT.csv ../data/LSAT/gender/results/theta=0/resultData.csv``
+* ``faim-experiment --evaluate synthetic ../data/synthetic/dataset.csv ../data/synthetic/results/theta=0/resultData.csv``
 
 
 ## Development and Contribution
