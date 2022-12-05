@@ -6,8 +6,10 @@ scores: decile_score
 
 """
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
+import pooch
 
 from faim.visualization.plots import plotKDEPerGroup
 
@@ -15,7 +17,14 @@ from faim.visualization.plots import plotKDEPerGroup
 class CompasCreator:
     # TODO: Do we want to run experiments with violent recidivism, too?
 
-    def __init__(self, data_filepath: Path, output_dir: Path) -> None:
+    def __init__(self, output_dir: Path, data_filepath: Optional[Path] = None) -> None:
+        if data_filepath is None:
+            # ToDo: Update data URL to point to release rather than master branch
+            data_filepath = pooch.retrieve(
+                url="https://github.com/MilkaLichtblau/faim/raw/main/data/compas/compas_two_years.csv",
+                known_hash="d180e410066da845eceb452417fbf8b119633f05526bcb29ef2c5b546d8946c5",
+            )
+
         self.data_filepath = data_filepath
         self.output_dir = output_dir
 

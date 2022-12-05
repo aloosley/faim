@@ -124,9 +124,7 @@ def main():
     if args.create == ["synthetic"]:
         create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
     elif args.create == ["compas"]:
-        compasPreps = CompasCreator(
-            data_filepath=DATA_TOP_DIR / "compas" / "compas_two_years.csv", output_dir=OUTPUT_DIR / "compas"
-        )
+        compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
         compasPreps.prepare_gender_data()
         compasPreps.prepare_race_data()
         compasPreps.prepare_age_data()
