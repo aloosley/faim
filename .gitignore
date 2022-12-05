@@ -4,6 +4,7 @@ __pycache__
 *.pyc
 .coverage
 build
+dist
 
 # PyCharm
 .idea
