@@ -7,12 +7,11 @@ app = typer.Typer(name="faim", help="FAIM CLI")
 experiment_app = typer.Typer(name="experiment", help="reproduce experiments found in FAIM paper by Zehlike et al.")
 app.add_typer(experiment_app)
 
-synthetic_two_group_normal_experiment_app = typer.Typer(
-    name="synthetic-two-group-normal",
-    help="experiment with synthetic two-group data generated with prediction and ground truth scores sampled "
-    "from a two dimensional normal distribution (synthetic dataset from in paper)",
+synthetic_two_group_binormal_experiment_app = typer.Typer(
+    name="synthetic-two-group-binormal",
+    help='experiment with post-processing synthetic prediction and ground truth scores for two groups, each sampled from a corresponding binormal distribution (corresponds to "experiment with synthetic" data in paper)',
 )
-experiment_app.add_typer(synthetic_two_group_normal_experiment_app)
+experiment_app.add_typer(synthetic_two_group_binormal_experiment_app)
 compas_experiment_app = typer.Typer(name="compas", help="experiment with compas data")
 experiment_app.add_typer(compas_experiment_app)
 zalando_experiment_app = typer.Typer(name="zalando", help="experiment with Zalando data (coming soon)")
@@ -25,18 +24,18 @@ post_process_app = typer.Typer(name="transform-scores", help="transform scores (
 app.add_typer(post_process_app)
 
 
-@synthetic_two_group_normal_experiment_app.command(
-    "prepare-data", help="Generate two group synthetic distribution sampling from a 2-D correlated normal distribution."
+@synthetic_two_group_binormal_experiment_app.command(
+    "prepare-data", help="generate synthetic prediction and ground truth scores for two groups, each sampled from a corresponding binormal distribution"
 )
 def prepare_synthetic_two_group_normal_experiment_dataset(
     output_dir: Path = typer.Option(Path("prepared-data/synthetic-2groups"), help="prepared data output directory"),
     group1: Tuple[str, int, float, float, float] = typer.Option(
         ("disadvantaged", 100000, -1, -3, 0.8),
-        help="group 1 statistics: number of examples, mean ground truth score, mean predicted score, and covariance between the two",
+        help="NAME, N_EXAMPLES, MEAN GROUND TRUTH SCORE, MEAN PREDICTION SCORE, COV(GT, PRED)",
     ),
     group2: Tuple[str, int, float, float, float] = typer.Option(
         ("privileged", 100000, 1, 2, 0.8),
-        help="group 2 statistics: number of examples, mean ground truth score, mean predicted score, and covariance between the two",
+        help="NAME, N_EXAMPLES, MEAN GROUND TRUTH SCORE, MEAN PREDICTION SCORE, COV(GT, PRED)",
     ),
 ) -> None:
     ...
