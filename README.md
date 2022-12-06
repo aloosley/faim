@@ -9,7 +9,7 @@ Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/22
 is a post-processing algorithm for achieving a combination of group-fairness criteria
 (equalized false positive rates, equalized false negative rates, group calibration).
 
-[this page is under contruction]
+[this page is under construction]
 
 ## Installation
 
