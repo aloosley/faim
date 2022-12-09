@@ -8,6 +8,7 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
+import pooch
 
 from faim import evaluation
 from faim.algorithm.fia import FairnessInterpolationAlgorithm
@@ -23,7 +24,7 @@ DATA_TOP_DIR = Path(__file__).parent.parent / "data"
 OUTPUT_DIR = Path(".") / "prepared-data"
 
 
-def create_synthetic_data(size: int, group_names: Dict[int, str]):
+def create_synthetic_data(size: int, group_names: Dict[int, str]) -> None:
     creator = SyntheticDatasetCreator(size, len(group_names))
     creator.createTwoCorrelatedNormalDistributionScores()
     creator.sortByColumn("pred_score")
@@ -48,6 +49,19 @@ def create_synthetic_data(size: int, group_names: Dict[int, str]):
         group_names,
     )
     print(f"synthetic data output to '{output_dir}'")
+
+
+def download_synthetic_data(
+    base_url: str = "https://github.com/MilkaLichtblau/faim/tree/main/data/synthetic/2groups/2022-01-12",
+) -> None:
+    SYNTHETIC_DATASET_OUTPUT_DIR = OUTPUT_DIR / "/".join(base_url.split("/")[-3:])
+    for filename, known_hash in zip(("dataset.csv", "trueAndPredictedScoreDistributionPerGroup.png"), (None, None)):
+        if base_url[-1] == "/":
+            base_url = base_url[:-1]
+
+        pooch.retrieve(
+            url=f"{base_url}/{filename}", known_hash=known_hash, path=SYNTHETIC_DATASET_OUTPUT_DIR / filename
+        )
 
 
 def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_score, group_names, regForOT):
@@ -101,7 +115,7 @@ def main():
     parser.add_argument(
         "--create",
         nargs=1,
-        choices=["synthetic", "compas", "zalando"],
+        choices=["synthetic-from-paper", "compas", "zalando"],
         help="creates datasets from raw data and writes them to disk",
     )
     parser.add_argument(
@@ -114,14 +128,16 @@ def main():
     parser.add_argument(
         "--evaluate",
         nargs=1,
-        choices=["synthetic", "compas", "zalando"],
+        choices=["synthetic-from-paper", "compas", "zalando"],
         help="evaluates all experiments for respective dataset and \
                               stores results into same directory",
     )
 
     args = parser.parse_args()
 
-    if args.create == ["synthetic"]:
+    if args.create == ["synthetic-from-paper"]:
+        download_synthetic_data()
+    elif args.create == ["synthetic"]:
         create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
     elif args.create == ["compas"]:
         compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
@@ -129,12 +145,9 @@ def main():
         compasPreps.prepare_race_data()
         compasPreps.prepare_age_data()
     elif args.create == ["zalando"]:
-        input_filepath = DATA_TOP_DIR / "zalando/raw-data.csv"
+        raise ValueError("The Zalando dataset has not yet been released. Please contact the authors for more info.")
 
-        if not input_filepath.exists():
-            raise FileNotFoundError("The Zalando dataset must be requested from the authors.")
-
-        ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
+        # ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
     elif args.run:
         score_stepsize = float(args.run[1])
         # FIXME: thetas are given as np matrix in same order of group names that are defined below, because I did not find a way to pass them as
