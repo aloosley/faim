@@ -119,7 +119,7 @@ def parseThetasToMatrix(thetaString):
 
 def main():
     # parse command line options
-    parser = argparse.ArgumentParser(prog="Continuous Kleinberg Interpolation", epilog="=== === === end === === ===")
+    parser = argparse.ArgumentParser(epilog="=== === === end === === ===")
 
     parser.add_argument(
         "--prepare-data",
