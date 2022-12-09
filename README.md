@@ -74,17 +74,48 @@ where `DATASET` is one of:
 * `compas`
 * `zalando` [waiting for permission to release, contact us for more information]
 
-The dataset will be downloaded, and prepared-
+The dataset will be downloaded, and prepared to a folder called `prepared-data`.
 
 #### Run Experiment
 
-For each dataset the aforementioned group description csv file is needed. It is automatically generated during ``faim-experiment --prepare-data.``
+Having prepared data following the instruction above, you are ready to run a FAIM experiment:
+```bash
+faim-experiment --run PREPARED-DATASET LOW_SCORE_VAL,HIGH_SCORE_VAL THETAS PREPARED_DATA_FILEPATH
+```
 
-Running the CFA requires the following parameters: dataset name, the lowest and highest score value, the step size between two consecutive score values, a theta value for each group, and a path where the results are stored
+`PREPARED-DATASET` is now one of the following options (depending on what has been prepared):
+* `syntheticTwoGroups` (prepared using `--prepare-data synthetic*`)
+* `compasGender` (prepared using `--prepare-data compas`)
+* `compasRace` (prepared using `--prepare-data compas`)
+* `compasAge` (prepared using `--prepare-data compas`)
+* `zalando` (prepared using `--prepare-data zalando`) [waiting for permission to release, contact us for more information]
 
-Examples for the synthetic dataset:
-* ``faim-experiment --run synthetic 1,100 1 0,0,0,0,0,0 ../data/synthetic/results/theta=0/``
-* ``faim-experiment --run synthetic 1,100 1 1,1,1,1,1,1 ../data/synthetic/results/theta=1/``
+`LOW_SCORE_VAL,HIGH_SCORE_VAL` are two numbers that define the score range.
+
+`THETAS` correspond to the fairness compremise you want. There are three thetas per group corresponding to the
+desired amount of the three fairness criteria that the system should achieve:
+1. group calibration
+2. equalized false negative rates
+3. equalized false positive rates
+
+Note, as discussed in the paper, thetas = 1,1,1 does not indicate that the system will simultaneously achieve all
+three (mutually incompatible) fairness criteria, but rather the result will be a compromise between all three.
+
+See the [paper](https://arxiv.org/abs/2212.00469) for more details.
+
+Finally, `PREPARED_DATA_FILEPATH` corresponds to the filepath of the prepared data.
+
+###### Examples
+Run all of the following from the same folder where `faim-experiment --prepare-data` was run.  The results
+will be saved to a `results` folder.  In each example, a FAIM post-processor is trained:
+* Train FAIM model on synthetic dataset without any fairness correction
+  ```bash
+  faim-experiment --run synthetic 1,100 1 0,0,0,0,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  ```
+* Train FAIM model on synthetic dataset to achieve a combination of all three fairness criteria.
+  ```bash
+  faim-experiment --run synthetic 1,100 1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  ```
 
 #### Visualize Results
 Evaluates relevance and fairness changes for a given experiment and plots the results. Relevance is evaluated in terms of NDCG and Precision@k. Fairness is evaluated in terms of percentage of protected candidates at position k.
