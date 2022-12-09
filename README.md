@@ -67,16 +67,18 @@ Ensure the package has been installed with `[experiment]` extra requirements bef
 #### Prepare Data
 The CLI can be used to prepare any of the three datasets used in the [paper](https://arxiv.org/abs/2212.00469):
 ```bash
-faim-experiment --create DATASET
+faim-experiment --prepare-data DATASET
 ```
 where `DATASET` is one of:
-* `synthetic`
+* `synthetic-from-paper`
 * `compas`
 * `zalando` [waiting for permission to release, contact us for more information]
 
+The dataset will be downloaded, and prepared-
+
 #### Run Experiment
 
-For each dataset the aforementioned group description csv file is needed. It is automatically generated during ``python3 main.py --create.``
+For each dataset the aforementioned group description csv file is needed. It is automatically generated during ``faim-experiment --prepare-data.``
 
 Running the CFA requires the following parameters: dataset name, the lowest and highest score value, the step size between two consecutive score values, a theta value for each group, and a path where the results are stored
 

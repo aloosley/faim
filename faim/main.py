@@ -113,10 +113,10 @@ def main():
     parser = argparse.ArgumentParser(prog="Continuous Kleinberg Interpolation", epilog="=== === === end === === ===")
 
     parser.add_argument(
-        "--create",
+        "--prepare-data",
         nargs=1,
         choices=["synthetic-from-paper", "compas", "zalando"],
-        help="creates datasets from raw data and writes them to disk",
+        help="download (or generate) raw data and prepare dataset for experiments (written to prepared-data folder in current directory)",
     )
     parser.add_argument(
         "--run",
@@ -135,16 +135,18 @@ def main():
 
     args = parser.parse_args()
 
-    if args.create == ["synthetic-from-paper"]:
-        download_synthetic_data()
-    elif args.create == ["synthetic"]:
+    if args.prepare_data == ["synthetic-from-paper"]:
+        download_synthetic_data(
+            base_url="https://github.com/MilkaLichtblau/faim/tree/main/data/synthetic/2groups/2022-01-12"
+        )
+    elif args.prepare_data == ["synthetic"]:
         create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
-    elif args.create == ["compas"]:
+    elif args.prepare_data == ["compas"]:
         compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
         compasPreps.prepare_gender_data()
         compasPreps.prepare_race_data()
         compasPreps.prepare_age_data()
-    elif args.create == ["zalando"]:
+    elif args.prepare_data == ["zalando"]:
         raise ValueError("The Zalando dataset has not yet been released. Please contact the authors for more info.")
 
         # ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
