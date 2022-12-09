@@ -76,6 +76,17 @@ where `DATASET` is one of:
 
 The dataset will be downloaded, and prepared to a folder called `prepared-data`.
 
+The following sections include info about each dataset:
+
+###### synthetic data
+This data is generated ...
+
+###### compas
+The raw data was obtained **[here]** with [this] license.
+
+###### zalando
+**More information to follow!**
+
 #### Run Experiment
 
 Having prepared data following the instruction above, you are ready to run a FAIM experiment:
