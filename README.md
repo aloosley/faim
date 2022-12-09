@@ -79,7 +79,9 @@ The dataset will be downloaded, and prepared to a folder called `prepared-data`.
 The following sections include info about each dataset:
 
 ###### synthetic data
-This data is generated ...
+The raw dataset in the GitHub repo corresponds to synthetic prediction and ground truth scores for two groups,
+for each group sampling from a corresponding binormal distribution.  This data can be considered to fall under the
+umbrella of FAIM's [LICENSE](LICENSE).
 
 ###### compas
 The raw data was obtained **[here]** with [this] license.
