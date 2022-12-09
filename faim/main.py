@@ -9,14 +9,14 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 import pooch
+import requests
+from tqdm import tqdm
 
 from faim import evaluation
 from faim.algorithm.fia import FairnessInterpolationAlgorithm
 from faim.data_preparation.compas import CompasCreator
 from faim.data_preparation.synthetic import SyntheticDatasetCreator
-from faim.data_preparation.zalando import ZalandoDataset
 from faim.visualization.plots import plotScoreKDEsPerGroup
-
 
 DATA_TOP_DIR = Path(__file__).parent.parent / "data"
 
@@ -52,15 +52,24 @@ def create_synthetic_data(size: int, group_names: Dict[int, str]) -> None:
 
 
 def download_synthetic_data(
-    base_url: str = "https://github.com/MilkaLichtblau/faim/tree/main/data/synthetic/2groups/2022-01-12",
+    base_url: str = "https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12",
 ) -> None:
     SYNTHETIC_DATASET_OUTPUT_DIR = OUTPUT_DIR / "/".join(base_url.split("/")[-3:])
-    for filename, known_hash in zip(("dataset.csv", "trueAndPredictedScoreDistributionPerGroup.png"), (None, None)):
+    if not SYNTHETIC_DATASET_OUTPUT_DIR.exists():
+        SYNTHETIC_DATASET_OUTPUT_DIR.mkdir(parents=True)
+
+    for filename, known_hash in zip(
+        ("dataset.csv", "trueAndPredictedScoreDistributionPerGroup.png"),
+        (
+            "9637ae334d7f0d66b224f7e6f5c231d184efea6ce543d1814426b71541e815c8",
+            "4a57a4f52d8763147abe4d00f876560ccbf9b4adb9fbc380aa0cbb80b4e7090b",
+        ),
+    ):
         if base_url[-1] == "/":
             base_url = base_url[:-1]
 
         pooch.retrieve(
-            url=f"{base_url}/{filename}", known_hash=known_hash, path=SYNTHETIC_DATASET_OUTPUT_DIR / filename
+            url=f"{base_url}/{filename}", known_hash=known_hash, path=SYNTHETIC_DATASET_OUTPUT_DIR, fname=filename
         )
 
 
@@ -137,7 +146,7 @@ def main():
 
     if args.prepare_data == ["synthetic-from-paper"]:
         download_synthetic_data(
-            base_url="https://github.com/MilkaLichtblau/faim/tree/main/data/synthetic/2groups/2022-01-12"
+            base_url="https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12"
         )
     elif args.prepare_data == ["synthetic-generated"]:
         create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
@@ -156,8 +165,6 @@ def main():
         # dict
         thetasAsNpMatrix = parseThetasToMatrix(args.run[2])
 
-        # set current working directory to /Code such that paths are not messed up on different systems
-        os.chdir(Path(__file__).resolve().parent.parent.absolute())
         # create result directory with matching subdir structure as in data folder, assuming relative path
         relativePathToData = args.run[3]
         # extract subdir structure
@@ -196,16 +203,16 @@ def main():
             (groupName, thetasAsNpMatrix[i]) for groupName in groupNames.keys() for i in range(len(groupNames.keys()))
         )
         interpolate_fairly(
-            score_stepsize,
-            thetas,
-            resultDir,
-            relativePathToData,
-            "pred_score",
-            groupNames,
-            regForOT,
+            score_stepsize=score_stepsize,
+            thetas=thetas,
+            result_dir=resultDir,
+            pathToData=relativePathToData,
+            pred_score="pred_score",
+            group_names=groupNames,
+            regForOT=regForOT,
         )
     elif args.evaluate:
-        if args.evaluate[0] == "synthetic":
+        if args.evaluate[0] == "synthetic-from-paper":
             allSyntheticResults = glob.glob(
                 os.path.join("results", "synthetic", "**", "resultData.csv"),
                 recursive=True,
