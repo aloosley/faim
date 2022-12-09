@@ -106,24 +106,20 @@ See the [paper](https://arxiv.org/abs/2212.00469) for more details.
 Finally, `PREPARED_DATA_FILEPATH` corresponds to the filepath of the prepared data.
 
 ###### Examples
-Run all of the following from the same folder where `faim-experiment --prepare-data` was run.  The results
-will be saved to a `results` folder.  In each example, a FAIM post-processor is trained:
+Run all of the following from the same folder where `faim-experiment --prepare-data` was run.
+
+In each example, a FAIM post-processor is trained and evaluated with results saved under the `results` folder:
 * Train FAIM model on synthetic dataset without any fairness correction
   ```bash
-  faim-experiment --run synthetic 1,100 1 0,0,0,0,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  faim-experiment --run syntheticTwoGroups 0.1 0,0,0,0,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
   ```
 * Train FAIM model on synthetic dataset to achieve a combination of all three fairness criteria.
   ```bash
-  faim-experiment --run synthetic 1,100 1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  faim-experiment --run syntheticTwoGroups 0.1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
   ```
 
 #### Visualize Results
-Evaluates relevance and fairness changes for a given experiment and plots the results. Relevance is evaluated in terms of NDCG and Precision@k. Fairness is evaluated in terms of percentage of protected candidates at position k.
-
-Running the evaluation requires the following terminal arguments: dataset name, path to original dataset (before post-processing with CFA), path to result dataset (after applying the CFA). The evaluation files are stored in the same directory as the result dataset.
-
-* ``faim-experiment --evaluate synthetic ../data/synthetic/dataset.csv ../data/synthetic/results/theta=0/resultData.csv``
-
+**Needs documentation!**
 
 ## Development and Contribution
 Contributions are welcome.
