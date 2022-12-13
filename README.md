@@ -38,10 +38,10 @@ pip --version
 ### Python Package
 To install the package, go to the root directory of this repository and run
 ```bash
-pip install ".[experiment]"
+pip install "faim[experiment]"
 ```
 
-Note the `[experiment]` notation is required for now since for the moment, the algorithm can only be run in experiment
+Note the `[experiment]` notation is required for now since, for the moment, the algorithm can only be run in experiment
 mode for recreating experimental results in the [paper](https://arxiv.org/abs/2212.00469).
 **In the future, `faim` will be made available directly via `pip install faim` with an API for easily applying the
 post-processing algorithm to any classifier scores (given ground truth and group information).
@@ -87,7 +87,7 @@ umbrella of FAIM's [LICENSE](LICENSE).
 The raw data was obtained **[here]** with [this] license.
 
 ###### zalando
-**More information to follow!**
+**Under construction, more information to follow!**
 
 #### Run Experiment
 
@@ -133,9 +133,6 @@ In each example, a FAIM post-processor is trained and evaluated with results sav
 
 #### Visualize Results
 **Needs documentation!**
-
-## Development and Contribution
-Contributions are welcome.
 
 ### Development Environment
 To develop, use the following command to install the package as editable with extra dev requirements:
