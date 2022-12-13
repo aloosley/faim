@@ -38,10 +38,10 @@ pip --version
 ### Python Package
 To install the package, go to the root directory of this repository and run
 ```bash
-pip install ".[experiment]"
+pip install "faim[experiment]"
 ```
 
-Note the `[experiment]` notation is required for now since for the moment, the algorithm can only be run in experiment
+Note the `[experiment]` notation is required for now since, for the moment, the algorithm can only be run in experiment
 mode for recreating experimental results in the [paper](https://arxiv.org/abs/2212.00469).
 **In the future, `faim` will be made available directly via `pip install faim` with an API for easily applying the
 post-processing algorithm to any classifier scores (given ground truth and group information).
@@ -67,33 +67,72 @@ Ensure the package has been installed with `[experiment]` extra requirements bef
 #### Prepare Data
 The CLI can be used to prepare any of the three datasets used in the [paper](https://arxiv.org/abs/2212.00469):
 ```bash
-faim-experiment --create DATASET
+faim-experiment --prepare-data DATASET
 ```
 where `DATASET` is one of:
-* `synthetic`
+* `synthetic-from-paper`
 * `compas`
 * `zalando` [waiting for permission to release, contact us for more information]
 
+The dataset will be downloaded, and prepared to a folder called `prepared-data`.
+
+The following sections include info about each dataset:
+
+###### synthetic data
+The raw dataset in the GitHub repo corresponds to synthetic prediction and ground truth scores for two groups,
+for each group sampling from a corresponding binormal distribution.  This data can be considered to fall under the
+umbrella of FAIM's [LICENSE](LICENSE).
+
+###### compas
+The raw data was obtained **[here]** with [this] license.
+
+###### zalando
+**Under construction, more information to follow!**
+
 #### Run Experiment
 
-For each dataset the aforementioned group description csv file is needed. It is automatically generated during ``python3 main.py --create.``
+Having prepared data following the instruction above, you are ready to run a FAIM experiment:
+```bash
+faim-experiment --run PREPARED-DATASET LOW_SCORE_VAL,HIGH_SCORE_VAL THETAS PREPARED_DATA_FILEPATH
+```
 
-Running the CFA requires the following parameters: dataset name, the lowest and highest score value, the step size between two consecutive score values, a theta value for each group, and a path where the results are stored
+`PREPARED-DATASET` is now one of the following options (depending on what has been prepared):
+* `syntheticTwoGroups` (prepared using `--prepare-data synthetic*`)
+* `compasGender` (prepared using `--prepare-data compas`)
+* `compasRace` (prepared using `--prepare-data compas`)
+* `compasAge` (prepared using `--prepare-data compas`)
+* `zalando` (prepared using `--prepare-data zalando`) [waiting for permission to release, contact us for more information]
 
-Examples for the synthetic dataset:
-* ``faim-experiment --run synthetic 1,100 1 0,0,0,0,0,0 ../data/synthetic/results/theta=0/``
-* ``faim-experiment --run synthetic 1,100 1 1,1,1,1,1,1 ../data/synthetic/results/theta=1/``
+`LOW_SCORE_VAL,HIGH_SCORE_VAL` are two numbers that define the score range.
+
+`THETAS` correspond to the fairness compremise you want. There are three thetas per group corresponding to the
+desired amount of the three fairness criteria that the system should achieve:
+1. group calibration
+2. equalized false negative rates
+3. equalized false positive rates
+
+Note, as discussed in the paper, thetas = 1,1,1 does not indicate that the system will simultaneously achieve all
+three (mutually incompatible) fairness criteria, but rather the result will be a compromise between all three.
+
+See the [paper](https://arxiv.org/abs/2212.00469) for more details.
+
+Finally, `PREPARED_DATA_FILEPATH` corresponds to the filepath of the prepared data.
+
+###### Examples
+Run all of the following from the same folder where `faim-experiment --prepare-data` was run.
+
+In each example, a FAIM post-processor is trained and evaluated with results saved under the `results` folder:
+* Train FAIM model on synthetic dataset without any fairness correction
+  ```bash
+  faim-experiment --run syntheticTwoGroups 0.1 0,0,0,0,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  ```
+* Train FAIM model on synthetic dataset to achieve a combination of all three fairness criteria.
+  ```bash
+  faim-experiment --run syntheticTwoGroups 0.1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  ```
 
 #### Visualize Results
-Evaluates relevance and fairness changes for a given experiment and plots the results. Relevance is evaluated in terms of NDCG and Precision@k. Fairness is evaluated in terms of percentage of protected candidates at position k.
-
-Running the evaluation requires the following terminal arguments: dataset name, path to original dataset (before post-processing with CFA), path to result dataset (after applying the CFA). The evaluation files are stored in the same directory as the result dataset.
-
-* ``faim-experiment --evaluate synthetic ../data/synthetic/dataset.csv ../data/synthetic/results/theta=0/resultData.csv``
-
-
-## Development and Contribution
-Contributions are welcome.
+**Needs documentation!**
 
 ### Development Environment
 To develop, use the following command to install the package as editable with extra dev requirements:

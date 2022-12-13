@@ -8,14 +8,15 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
+import pooch
+import requests
+from tqdm import tqdm
 
 from faim import evaluation
 from faim.algorithm.fia import FairnessInterpolationAlgorithm
 from faim.data_preparation.compas import CompasCreator
 from faim.data_preparation.synthetic import SyntheticDatasetCreator
-from faim.data_preparation.zalando import ZalandoDataset
 from faim.visualization.plots import plotScoreKDEsPerGroup
-
 
 DATA_TOP_DIR = Path(__file__).parent.parent / "data"
 
@@ -23,7 +24,7 @@ DATA_TOP_DIR = Path(__file__).parent.parent / "data"
 OUTPUT_DIR = Path(".") / "prepared-data"
 
 
-def create_synthetic_data(size: int, group_names: Dict[int, str]):
+def create_synthetic_data(size: int, group_names: Dict[int, str]) -> None:
     creator = SyntheticDatasetCreator(size, len(group_names))
     creator.createTwoCorrelatedNormalDistributionScores()
     creator.sortByColumn("pred_score")
@@ -48,6 +49,28 @@ def create_synthetic_data(size: int, group_names: Dict[int, str]):
         group_names,
     )
     print(f"synthetic data output to '{output_dir}'")
+
+
+def download_synthetic_data(
+    base_url: str = "https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12",
+) -> None:
+    SYNTHETIC_DATASET_OUTPUT_DIR = OUTPUT_DIR / "/".join(base_url.split("/")[-3:])
+    if not SYNTHETIC_DATASET_OUTPUT_DIR.exists():
+        SYNTHETIC_DATASET_OUTPUT_DIR.mkdir(parents=True)
+
+    for filename, known_hash in zip(
+        ("dataset.csv", "trueAndPredictedScoreDistributionPerGroup.png"),
+        (
+            "9637ae334d7f0d66b224f7e6f5c231d184efea6ce543d1814426b71541e815c8",
+            "4a57a4f52d8763147abe4d00f876560ccbf9b4adb9fbc380aa0cbb80b4e7090b",
+        ),
+    ):
+        if base_url[-1] == "/":
+            base_url = base_url[:-1]
+
+        pooch.retrieve(
+            url=f"{base_url}/{filename}", known_hash=known_hash, path=SYNTHETIC_DATASET_OUTPUT_DIR, fname=filename
+        )
 
 
 def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_score, group_names, regForOT):
@@ -96,13 +119,13 @@ def parseThetasToMatrix(thetaString):
 
 def main():
     # parse command line options
-    parser = argparse.ArgumentParser(prog="Continuous Kleinberg Interpolation", epilog="=== === === end === === ===")
+    parser = argparse.ArgumentParser(epilog="=== === === end === === ===")
 
     parser.add_argument(
-        "--create",
+        "--prepare-data",
         nargs=1,
-        choices=["synthetic", "compas", "zalando"],
-        help="creates datasets from raw data and writes them to disk",
+        choices=["synthetic-generated", "synthetic-from-paper", "compas", "zalando"],
+        help="download (or generate new) raw data and prepare dataset for experiments (written to prepared-data folder in current directory)",
     )
     parser.add_argument(
         "--run",
@@ -114,35 +137,34 @@ def main():
     parser.add_argument(
         "--evaluate",
         nargs=1,
-        choices=["synthetic", "compas", "zalando"],
+        choices=["synthetic-generated", "synthetic-from-paper", "compas", "zalando"],
         help="evaluates all experiments for respective dataset and \
                               stores results into same directory",
     )
 
     args = parser.parse_args()
 
-    if args.create == ["synthetic"]:
+    if args.prepare_data == ["synthetic-from-paper"]:
+        download_synthetic_data(
+            base_url="https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12"
+        )
+    elif args.prepare_data == ["synthetic-generated"]:
         create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
-    elif args.create == ["compas"]:
+    elif args.prepare_data == ["compas"]:
         compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
         compasPreps.prepare_gender_data()
         compasPreps.prepare_race_data()
         compasPreps.prepare_age_data()
-    elif args.create == ["zalando"]:
-        input_filepath = DATA_TOP_DIR / "zalando/raw-data.csv"
+    elif args.prepare_data == ["zalando"]:
+        raise ValueError("The Zalando dataset has not yet been released. Please contact the authors for more info.")
 
-        if not input_filepath.exists():
-            raise FileNotFoundError("The Zalando dataset must be requested from the authors.")
-
-        ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
+        # ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
     elif args.run:
         score_stepsize = float(args.run[1])
         # FIXME: thetas are given as np matrix in same order of group names that are defined below, because I did not find a way to pass them as
         # dict
         thetasAsNpMatrix = parseThetasToMatrix(args.run[2])
 
-        # set current working directory to /Code such that paths are not messed up on different systems
-        os.chdir(Path(__file__).resolve().parent.parent.absolute())
         # create result directory with matching subdir structure as in data folder, assuming relative path
         relativePathToData = args.run[3]
         # extract subdir structure
@@ -181,16 +203,16 @@ def main():
             (groupName, thetasAsNpMatrix[i]) for groupName in groupNames.keys() for i in range(len(groupNames.keys()))
         )
         interpolate_fairly(
-            score_stepsize,
-            thetas,
-            resultDir,
-            relativePathToData,
-            "pred_score",
-            groupNames,
-            regForOT,
+            score_stepsize=score_stepsize,
+            thetas=thetas,
+            result_dir=resultDir,
+            pathToData=relativePathToData,
+            pred_score="pred_score",
+            group_names=groupNames,
+            regForOT=regForOT,
         )
     elif args.evaluate:
-        if args.evaluate[0] == "synthetic":
+        if args.evaluate[0] == "synthetic-from-paper":
             allSyntheticResults = glob.glob(
                 os.path.join("results", "synthetic", "**", "resultData.csv"),
                 recursive=True,
