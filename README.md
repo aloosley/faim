@@ -96,7 +96,7 @@ faim-experiment --run PREPARED-DATASET LOW_SCORE_VAL,HIGH_SCORE_VAL THETAS PREPA
 ```
 
 `PREPARED-DATASET` is now one of the following options (depending on what has been prepared):
-* `syntheticTwoGroups` (prepared using `--prepare-data synthetic*`)
+* `syntheticTwoGroups` (prepared using `--prepare-data synthetic`)
 * `compasGender` (prepared using `--prepare-data compas`)
 * `compasRace` (prepared using `--prepare-data compas`)
 * `compasAge` (prepared using `--prepare-data compas`)
