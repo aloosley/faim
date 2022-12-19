@@ -104,7 +104,7 @@ faim-experiment --run PREPARED-DATASET LOW_SCORE_VAL,HIGH_SCORE_VAL THETAS PREPA
 
 `LOW_SCORE_VAL,HIGH_SCORE_VAL` are two numbers that define the score range.
 
-`THETAS` correspond to the fairness compremise you want. There are three thetas per group corresponding to the
+`THETAS` correspond to the fairness compromise you want. There are three thetas per group corresponding to the
 desired amount of the three fairness criteria that the system should achieve:
 1. group calibration
 2. equalized false negative rates
