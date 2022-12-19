@@ -43,8 +43,8 @@ pip install "faim[experiment]"
 
 Note the `[experiment]` notation is required for now since, for the moment, the algorithm can only be run in experiment
 mode for recreating experimental results in the [paper](https://arxiv.org/abs/2212.00469).
-**In the future, `faim` will be made available directly via `pip install faim` with an API for easily applying the
-post-processing algorithm to any classifier scores (given ground truth and group information).
+In the future, `faim` will be made available for post-processing classifier scores
+(given ground truth and group information), going beyond reproducing paper experiments.
 
 ### Removal
 From the environment where you installed the package, run
@@ -78,15 +78,14 @@ The dataset will be downloaded, and prepared to a folder called `prepared-data`.
 
 The following sections include info about each dataset:
 
-###### synthetic data
+###### Synthetic data
 The raw dataset in the GitHub repo corresponds to synthetic prediction and ground truth scores for two groups,
-for each group sampling from a corresponding binormal distribution.  This data can be considered to fall under the
-umbrella of FAIM's [LICENSE](LICENSE).
+for each group sampling from a corresponding binormal distribution.
 
-###### compas
-The raw data was obtained **[here]** with [this] license.
+###### COMPAS data
+The raw data was obtained from [ProPublica's COMPAS Analysis repository](https://github.com/propublica/compas-analysis).
 
-###### zalando
+###### Zalando data
 **Under construction, more information to follow!**
 
 #### Run Experiment
