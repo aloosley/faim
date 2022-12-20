@@ -1,16 +1,15 @@
 import argparse
 import glob
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from time import process_time
-from typing import Dict
+from typing import Dict, Optional, List
 
 import numpy as np
 import pandas as pd
 import pooch
-import requests
-from tqdm import tqdm
 
 from faim import evaluation
 from faim.algorithm.fia import FairnessInterpolationAlgorithm
@@ -117,7 +116,7 @@ def parseThetasToMatrix(thetaString):
     return np.reshape(thetas1D, (-1, 3))
 
 
-def main():
+def main(argv: Optional[List[str]] = None):
     # parse command line options
     parser = argparse.ArgumentParser(epilog="=== === === end === === ===")
 
@@ -142,7 +141,7 @@ def main():
                               stores results into same directory",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.prepare_data == ["synthetic-from-paper"]:
         download_synthetic_data(
