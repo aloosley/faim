@@ -36,7 +36,7 @@ pip --version
 ```
 
 ### Python Package
-To install the package, go to the root directory of this repository and run
+The package and experiment CLI can be installed with pip:
 ```bash
 pip install "faim[experiment]"
 ```
@@ -45,6 +45,9 @@ Note the `[experiment]` notation is required for now since, for the moment, the 
 mode for recreating experimental results in the [paper](https://arxiv.org/abs/2212.00469).
 In the future, `faim` will be made available for post-processing classifier scores
 (given ground truth and group information), going beyond reproducing paper experiments.
+
+If you intend to develop the package and/or contribute, follow the install instructions in the
+[Development Environment](#development-environment) section below.
 
 ### Removal
 From the environment where you installed the package, run
@@ -140,9 +143,9 @@ pip install -e ".[experiment, dev]"
 ```
 
 Don't confuse the `[]` to mean optional.  The `".[experiment, dev]"` notation tells pip to install extra
-"experiment" and "dev" requirements including things like `pytest`, `pre-commit`, `matplotlib`, and so on.
+"experiment" and "dev" requirements including things like `pytest` and `pre-commit`.
 
-Please be sure to install (and use) our [pre-commit](https://pre-commit.com/) hooks:
+When contributing, be sure to install (and use) our [pre-commit](https://pre-commit.com/) hooks:
 ```bash
 pre-commit install -t pre-commit -t pre-push
 ```
