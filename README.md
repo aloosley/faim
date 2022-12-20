@@ -137,9 +137,15 @@ In each example, a FAIM post-processor is trained and evaluated with results sav
 **Needs documentation!**
 
 ### Development Environment
-To develop, use the following command to install the package as editable with extra dev requirements:
+To develop and/or contribute, clone the repository
 ```bash
-pip install -e ".[experiment, dev]"
+git clone <this repo URL>
+```
+
+From the root directory of the git repository, install the package with pip in editable mode (`-e`)
+with extra requirements for experiments (experiment) and development (dev):
+```bash
+pip install -e ".[experiment,dev]"
 ```
 
 Don't confuse the `[]` to mean optional.  The `".[experiment, dev]"` notation tells pip to install extra
