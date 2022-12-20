@@ -36,6 +36,9 @@ pip --version
 ```
 
 ### Python Package
+If you intend to develop the package and/or contribute, follow the install instructions in the
+[Development Environment](#development-environment) section below instead.  Otherwise, follow these instructions.
+
 The package and experiment CLI can be installed with pip:
 ```bash
 pip install "faim[experiment]"
@@ -46,8 +49,7 @@ mode for recreating experimental results in the [paper](https://arxiv.org/abs/22
 In the future, `faim` will be made available for post-processing classifier scores
 (given ground truth and group information), going beyond reproducing paper experiments.
 
-If you intend to develop the package and/or contribute, follow the install instructions in the
-[Development Environment](#development-environment) section below.
+
 
 ### Removal
 From the environment where you installed the package, run
