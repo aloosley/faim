@@ -179,7 +179,7 @@ def main(argv: Optional[List[str]] = None):
         resultDir = os.path.join(*(folderList))
         Path(resultDir).mkdir(parents=True, exist_ok=True)
 
-        if args.run[0] == "syntheticTwoGroups":
+        if args.run[0] == "synthetic-from-paper":
             regForOT = 0.001
             groupNames = {0: "privileged", 1: "disadvantaged"}
         elif args.run[0] == "compasGender":
@@ -196,8 +196,8 @@ def main(argv: Optional[List[str]] = None):
             groupNames = {0: "low", 1: "high"}
         else:
             parser.error(
-                "unknown dataset. Options are 'syntheticTwoGroups', \
-                'compas race', 'compas age', 'compas gender', and \
+                "unknown dataset. Options are 'synthetic-from-paper', \
+                'compasRace', 'compasAge', 'compasGender', and \
                 'zalando'."
             )
 
