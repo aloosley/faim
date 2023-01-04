@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,16 +14,16 @@ class SyntheticDatasetCreator(object):
     def boundary(self):
         return self.__boundary
 
-    def __init__(self, size, groupCount):
+    def __init__(self, size: int, group_count: int) -> None:
         """
         @param size:                            total number of data points to be created
-        @param groupCount:                      total number of groups
+        @param group_count:                      total number of groups
         """
 
         self.__dataset = pd.DataFrame()
 
         # assign groups to items
-        self.__dataset["group"] = np.random.randint(0, groupCount, size)
+        self.__dataset["group"] = np.random.randint(0, group_count, size)
 
         # generate ID column with 128-bit integer IDs
         self.__dataset["uuid"] = [uuid.uuid4().int for _ in range(len(self.__dataset.index))]
@@ -70,5 +71,5 @@ class SyntheticDatasetCreator(object):
 
         self.__dataset = self.__dataset.groupby(self.__dataset["group"], as_index=False, sort=False).apply(score)
 
-    def writeToCSV(self, pathToDataset):
-        self.__dataset.to_csv(pathToDataset, index=False, header=True)
+    def writeToCSV(self, output_filepath: Path) -> None:
+        self.__dataset.to_csv(output_filepath, index=False, header=True)

@@ -1,2 +1,17 @@
+# Python
 *.egg-info
 __pycache__
+*.pyc
+.coverage
+build
+dist
+
+# PyCharm
+.idea
+
+# VSCode
+launch.json
+
+# Data
+*prepared-data*
+*/prepared-data

@@ -7,15 +7,15 @@ import numpy as np
 import ot
 import pandas as pd
 
-from continuous_kleinberg.util.util import normalizeRowsToOne, scoresByGroup
-from continuous_kleinberg.visualization.plots import plotScoreHistsPerGroup
+from faim.util.util import normalizeRowsToOne, scoresByGroup
+from faim.visualization.plots import plotScoreHistsPerGroup
 
 DEBUG_SA = 0
 DEBUG_SIGMA = 1
 SA_COLNAME = "SA_scores"
 
 
-class FairnessInterpolationAlgorithm:
+class FairInterpolationMethod:
     """
     interpolates between three mutually exclusive algorithmic fairness definitions namely:
     A) Calibration within groups (or accuracy of prediction)
@@ -28,7 +28,7 @@ class FairnessInterpolationAlgorithm:
     With these weights, the predicted scores are transformed into a fairer representation, which meets
     criterion A, B and C as per given weight, by use of displacement interpolation per group.
 
-    See https://arxiv.org/abs/xxx for details.
+    See https://arxiv.org/abs/2212.00469 for details.
     """
 
     def __init__(
@@ -106,15 +106,7 @@ class FairnessInterpolationAlgorithm:
         self.__regForOT = regForOT
 
     def __plott(
-        self,
-        dataframe,
-        filename,
-        xLabel="",
-        yLabel="",
-        xTickLabels=None,
-        yMin=None,
-        yMax=None,
-        isTransportMap=False
+        self, dataframe, filename, xLabel="", yLabel="", xTickLabels=None, yMin=None, yMax=None, isTransportMap=False
     ):
         # FIXME: move this to visualization package?
         mpl.rcParams.update(
@@ -134,7 +126,7 @@ class FairnessInterpolationAlgorithm:
         if isTransportMap:
             # plot identity line
             identityCol = pd.Series(np.linspace(0, 1, num=len(dataframe.index)))
-            identityCol.plot.line(color='grey', linestyle='dashed')
+            identityCol.plot.line(color="grey", linestyle="dashed")
         # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
         #           labels=self.__groups)
         ax.set_xlabel(xLabel)
@@ -238,7 +230,7 @@ class FairnessInterpolationAlgorithm:
                 xTickLabels=self.__binEdges[:-1].round(decimals=2),
                 yMin=0,
                 yMax=1,
-                isTransportMap=True
+                isTransportMap=True,
             )
 
         return fairScoreTranslationPerGroup
@@ -277,7 +269,7 @@ class FairnessInterpolationAlgorithm:
                 [newScores_colName, self.__predScoreTruncated],
                 os.path.join(self.__plotPath, newScores_colName + "DistributionPerGroup.png"),
                 self.__groups,
-                xTickLabels=roundedFairEdges
+                xTickLabels=roundedFairEdges,
             )
             # plot new scores for true positives and true negatives
             mask = raw["groundTruthLabel"] == 1
@@ -459,6 +451,7 @@ class FairnessInterpolationAlgorithm:
         for group in muA_perGroup:
             # normalize each array of group thetas to add up to 1, because they will be used as barycenter weights later
             groupThetas = np.array(self.__thetas.get(group)) / np.array(self.__thetas.get(group)).sum()
+            
 
             barycenters = pd.DataFrame()
             barycenters["muA"] = muA_perGroup[group]

@@ -4,40 +4,71 @@ import os
 from datetime import datetime
 from pathlib import Path
 from time import process_time
+from typing import Dict, Optional, List
 
 import numpy as np
 import pandas as pd
+import pooch
 
-from continuous_kleinberg import evaluation
-from continuous_kleinberg.algorithm.fia import FairnessInterpolationAlgorithm
-from continuous_kleinberg.data_preparation.compas import CompasCreator
-from continuous_kleinberg.data_preparation.synthetic import SyntheticDatasetCreator
-from continuous_kleinberg.data_preparation.zalando import ZalandoDataset
-from continuous_kleinberg.visualization.plots import plotScoreKDEsPerGroup
+from faim import evaluation
+from faim.algorithm.faim import FairInterpolationMethod
+from faim.data_preparation.compas import CompasCreator
+from faim.data_preparation.synthetic import SyntheticDatasetCreator
+from faim.visualization.plots import plotScoreKDEsPerGroup
+
+DATA_TOP_DIR = Path(__file__).parent.parent / "data"
+
+# ToDo: Add CLI parameter for output dir instead of hard-coding
+OUTPUT_DIR = Path(".") / "prepared-data"
 
 
-def createSyntheticData(size, groupNames):
-    creator = SyntheticDatasetCreator(size, len(groupNames))
+def create_synthetic_data(size: int, group_names: Dict[int, str]) -> None:
+    creator = SyntheticDatasetCreator(size, len(group_names))
     creator.createTwoCorrelatedNormalDistributionScores()
     creator.sortByColumn("pred_score")
     creator.setDecisionBoundaryAsMean("true_score", "pred_score")
 
     # create subdir structure
-    groupStr = str(len(groupNames)) + "groups/"
+    groupStr = str(len(group_names)) + "groups/"
     timestampStr = datetime.today().strftime("%Y-%m-%d")
-    dataDir = os.path.join(*(["data", "synthetic", groupStr, timestampStr]))
-    Path(dataDir).mkdir(parents=True, exist_ok=True)
+
+    output_dir = OUTPUT_DIR / "synthetic" / groupStr / timestampStr
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True)
 
     # store
-    creator.writeToCSV(os.path.join(dataDir, "dataset.csv"))
+    creator.writeToCSV(output_dir / "dataset.csv")
     plotScoreKDEsPerGroup(
         creator.dataset,
-        np.arange(len(groupNames)),
+        np.arange(len(group_names)),
         ["true_score", "pred_score"],
         creator.boundary,
-        os.path.join(dataDir, "trueAndPredictedScoreDistributionPerGroup.png"),
-        groupNames,
+        output_dir / "trueAndPredictedScoreDistributionPerGroup.png",
+        group_names,
     )
+    print(f"synthetic data output to '{output_dir}'")
+
+
+def download_synthetic_data(
+    base_url: str = "https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12",
+) -> None:
+    SYNTHETIC_DATASET_OUTPUT_DIR = OUTPUT_DIR / "/".join(base_url.split("/")[-3:])
+    if not SYNTHETIC_DATASET_OUTPUT_DIR.exists():
+        SYNTHETIC_DATASET_OUTPUT_DIR.mkdir(parents=True)
+
+    for filename, known_hash in zip(
+        ("dataset.csv", "trueAndPredictedScoreDistributionPerGroup.png"),
+        (
+            "9637ae334d7f0d66b224f7e6f5c231d184efea6ce543d1814426b71541e815c8",
+            "4a57a4f52d8763147abe4d00f876560ccbf9b4adb9fbc380aa0cbb80b4e7090b",
+        ),
+    ):
+        if base_url[-1] == "/":
+            base_url = base_url[:-1]
+
+        pooch.retrieve(
+            url=f"{base_url}/{filename}", known_hash=known_hash, path=SYNTHETIC_DATASET_OUTPUT_DIR, fname=filename
+        )
 
 
 def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_score, group_names, regForOT):
@@ -54,9 +85,13 @@ def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_scor
                 expected=3 * len(group_names.keys()), actual=actual
             )
         )
+    # check that group thetas are not all zero
+    for groupThetas in thetas.values():
+        if all(t==0 for t in groupThetas):
+            raise ValueError("group thetas are all 0")
 
     t = process_time()
-    fia = FairnessInterpolationAlgorithm(
+    fia = FairInterpolationMethod(
         data,
         group_names,
         pred_score,
@@ -84,15 +119,15 @@ def parseThetasToMatrix(thetaString):
     return np.reshape(thetas1D, (-1, 3))
 
 
-def main():
+def main(argv: Optional[List[str]] = None):
     # parse command line options
-    parser = argparse.ArgumentParser(prog="Continuous Kleinberg Interpolation", epilog="=== === === end === === ===")
+    parser = argparse.ArgumentParser(epilog="=== === === end === === ===")
 
     parser.add_argument(
-        "--create",
+        "--prepare-data",
         nargs=1,
-        choices=["synthetic", "compas", "zalando"],
-        help="creates datasets from raw data and writes them to disk",
+        choices=["synthetic-generated", "synthetic-from-paper", "compas", "zalando"],
+        help="download (or generate new) raw data and prepare dataset for experiments (written to prepared-data folder in current directory)",
     )
     parser.add_argument(
         "--run",
@@ -104,30 +139,34 @@ def main():
     parser.add_argument(
         "--evaluate",
         nargs=1,
-        choices=["synthetic", "compas", "zalando"],
+        choices=["synthetic-generated", "synthetic-from-paper", "compas", "zalando"],
         help="evaluates all experiments for respective dataset and \
                               stores results into same directory",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    if args.create == ["synthetic"]:
-        createSyntheticData(100000, {0: "privileged", 1: "disadvantaged"})
-    elif args.create == ["compas"]:
-        compasPreps = CompasCreator("data/compas/compas_two_years.csv")
-        compasPreps.prepareGenderData("data/compas/gender/")
-        compasPreps.prepareRaceData("data/compas/race/")
-        compasPreps.prepareAgeData("data/compas/age/")
-    elif args.create == ["zalando"]:
-        ZalandoDataset(input_file="data/zalando/raw-data.csv", output_path="data/zalando/")
+    if args.prepare_data == ["synthetic-from-paper"]:
+        download_synthetic_data(
+            base_url="https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12"
+        )
+    elif args.prepare_data == ["synthetic-generated"]:
+        create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
+    elif args.prepare_data == ["compas"]:
+        compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
+        compasPreps.prepare_gender_data()
+        compasPreps.prepare_race_data()
+        compasPreps.prepare_age_data()
+    elif args.prepare_data == ["zalando"]:
+        raise ValueError("The Zalando dataset has not yet been released. Please contact the authors for more info.")
+
+        # ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
     elif args.run:
         score_stepsize = float(args.run[1])
         # FIXME: thetas are given as np matrix in same order of group names that are defined below, because I did not find a way to pass them as
         # dict
         thetasAsNpMatrix = parseThetasToMatrix(args.run[2])
 
-        # set current working directory to /Code such that paths are not messed up on different systems
-        os.chdir(Path(__file__).resolve().parent.parent.absolute())
         # create result directory with matching subdir structure as in data folder, assuming relative path
         relativePathToData = args.run[3]
         # extract subdir structure
@@ -166,16 +205,16 @@ def main():
             (groupName, thetasAsNpMatrix[i]) for groupName in groupNames.keys() for i in range(len(groupNames.keys()))
         )
         interpolate_fairly(
-            score_stepsize,
-            thetas,
-            resultDir,
-            relativePathToData,
-            "pred_score",
-            groupNames,
-            regForOT,
+            score_stepsize=score_stepsize,
+            thetas=thetas,
+            result_dir=resultDir,
+            pathToData=relativePathToData,
+            pred_score="pred_score",
+            group_names=groupNames,
+            regForOT=regForOT,
         )
     elif args.evaluate:
-        if args.evaluate[0] == "synthetic":
+        if args.evaluate[0] == "synthetic-from-paper":
             allSyntheticResults = glob.glob(
                 os.path.join("results", "synthetic", "**", "resultData.csv"),
                 recursive=True,
