@@ -126,9 +126,9 @@ Finally, `PREPARED_DATA_FILEPATH` corresponds to the filepath of the prepared da
 Run all of the following from the same folder where `faim-experiment --prepare-data` was run.
 
 In each example, a FAIM post-processor is trained and evaluated with results saved under the `results` folder:
-* Train FAIM model on synthetic dataset without any fairness correction
+* Train FAIM model on synthetic dataset with callibration as fairness correction
   ```bash
-  faim-experiment --run syntheticTwoGroups 0.1 0,0,0,0,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  faim-experiment --run syntheticTwoGroups 0.1 1,0,0,1,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
   ```
 * Train FAIM model on synthetic dataset to achieve a combination of all three fairness criteria.
   ```bash
