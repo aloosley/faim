@@ -9,6 +9,9 @@ dist
 # PyCharm
 .idea
 
+# VSCode
+launch.json
+
 # Data
 *prepared-data*
 */prepared-data

@@ -11,7 +11,7 @@ import pandas as pd
 import pooch
 
 from faim import evaluation
-from faim.algorithm.fia import FairnessInterpolationAlgorithm
+from faim.algorithm.faim import FairInterpolationMethod
 from faim.data_preparation.compas import CompasCreator
 from faim.data_preparation.synthetic import SyntheticDatasetCreator
 from faim.visualization.plots import plotScoreKDEsPerGroup
@@ -85,9 +85,13 @@ def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_scor
                 expected=3 * len(group_names.keys()), actual=actual
             )
         )
+    # check that group thetas are not all zero
+    for groupThetas in thetas.values():
+        if all(t==0 for t in groupThetas):
+            raise ValueError("group thetas are all 0")
 
     t = process_time()
-    fia = FairnessInterpolationAlgorithm(
+    fia = FairInterpolationMethod(
         data,
         group_names,
         pred_score,
