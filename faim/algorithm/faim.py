@@ -12,7 +12,7 @@ from faim.visualization.plots import plotScoreHistsPerGroup
 
 DEBUG_SA = 0
 DEBUG_SIGMA = 1
-SA_COLNAME = "SA_scores"
+SA_COLNAME = "SA"
 
 
 class FairInterpolationMethod:
@@ -451,7 +451,6 @@ class FairInterpolationMethod:
         for group in muA_perGroup:
             # normalize each array of group thetas to add up to 1, because they will be used as barycenter weights later
             groupThetas = np.array(self.__thetas.get(group)) / np.array(self.__thetas.get(group)).sum()
-            
 
             barycenters = pd.DataFrame()
             barycenters["muA"] = muA_perGroup[group]
