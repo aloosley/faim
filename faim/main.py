@@ -87,7 +87,7 @@ def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_scor
         )
     # check that group thetas are not all zero
     for groupThetas in thetas.values():
-        if all(t==0 for t in groupThetas):
+        if all(t == 0 for t in groupThetas):
             raise ValueError("group thetas are all 0")
 
     t = process_time()
