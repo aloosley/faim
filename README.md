@@ -101,7 +101,7 @@ faim-experiment --run PREPARED-DATASET LOW_SCORE_VAL,HIGH_SCORE_VAL THETAS PREPA
 ```
 
 `PREPARED-DATASET` is now one of the following options (depending on what has been prepared):
-* `syntheticTwoGroups` (prepared using `--prepare-data synthetic`)
+* `synthetic-from-paper` (prepared using `--prepare-data synthetic-from-paper`)
 * `compasGender` (prepared using `--prepare-data compas`)
 * `compasRace` (prepared using `--prepare-data compas`)
 * `compasAge` (prepared using `--prepare-data compas`)
@@ -128,15 +128,42 @@ Run all of the following from the same folder where `faim-experiment --prepare-d
 In each example, a FAIM post-processor is trained and evaluated with results saved under the `results` folder:
 * Train FAIM model on synthetic dataset with callibration as fairness correction
   ```bash
-  faim-experiment --run syntheticTwoGroups 0.1 1,0,0,1,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  faim-experiment --run synthetic-from-paper 0.1 1,0,0,1,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
   ```
 * Train FAIM model on synthetic dataset to achieve a combination of all three fairness criteria.
   ```bash
-  faim-experiment --run syntheticTwoGroups 0.1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
+  faim-experiment --run synthetic-from-paper 0.1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
   ```
+  
+Note, that at the moment we do not allow all thetas to be 0.
 
-#### Visualize Results
-**Needs documentation!**
+#### Visualize and Evaluate Results
+During the calculation the faim-algorithm creates a lot of plots that will help you to evaluate your results visually. You'll find them in the respective result folder of your experimental run, e.g., for experiment 
+  `faim-experiment --run synthetic-from-paper 0.1 1,0,0,1,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv`
+all results are saved to `results/synthetic/2groups/2022-01-12/1,0,0,1,0,0/`.
+
+These results include:
+* resultData.csv, which contains the original dataset plus four a new columns: SA, SB, SC, and the final fair scores that correspond to the given thetas
+* plot of the raw score distribution per group (truncatedRawScoreDistributionPerGroup.png)
+* plots of SA, SB, and SC per group (muA_perGroup.png, SBDistributionPerGroup.png, SCDistributionPerGroup.png
+* plot of the fair score distribution per group (fairScoreDistributionPerGroup.png)
+* plots of the transport maps per group (fairScoreReplacementStrategy.png)
+
+In addition to the plots, we provide performance and fairness evaluation code for all datasets. It automatically finds all resultData.csv-files for any experimental setup (e.g., different values of the theta-vector, or different datasets such as compasAge or compasGender) and writes a file eval.txt into the same folder of the respective resultData.csv.
+
+To run the evaluation, type
+```bash
+faim-experiment --evaluate DATASETS
+```
+`DATASETS` is now one of the following options:
+* `synthetic-from-paper` (recursively searches for all resultData.csv under results/synthetic)
+* `compas` (recursively searches for all resultData.csv under results/compas)
+* `zalando` (recursively searches for all resultData.csv under results/zalando)
+
+eval.txt calculates the following metrics:
+* The probability of the protected groups to be labeled positive w.r.t. the non-protected group, for the three cases ground truth, original prediction, and fair score prediction.
+* Accuracy, Precision, and Recall for the original and the fair model, plus the difference between them
+* False positive and false negative rates for the original and the fair model, plus the differcence between them
 
 ### Development Environment
 To develop and/or contribute, clone the repository

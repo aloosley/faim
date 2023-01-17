@@ -11,7 +11,12 @@ dist
 
 # VSCode
 launch.json
+settings.json
+.env
 
 # Data
 *prepared-data*
 */prepared-data
+
+# Results
+results/

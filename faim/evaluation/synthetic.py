@@ -105,7 +105,7 @@ def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
     allErrorRates = allErrorRates.append(pd.Series({"FPR": falsePositiveRate, "FNR": falseNegativeRate}, name="all"))
 
     # print stuff
-    resultString = "\nERROR RATES ALL DEFENDANTS \n====================================\n"
+    resultString = "\nERROR RATES ALL INDIVIDUALS \n====================================\n"
     resultString += skmetr.classification_report(data["groundTruthLabel"], data[scoreAttr]) + "\n\n"
     resultString += str(confusionMatrixAll) + "\n\n"
 
@@ -137,7 +137,7 @@ def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
         )
 
         # print
-        resultString += "ERROR RATES GROUP " + str(group) + " DEFENDANTS \n====================================\n"
+        resultString += "ERROR RATES GROUP " + str(group) + " INDIVIDUALS \n====================================\n"
         resultString += skmetr.classification_report(groupData["groundTruthLabel"], groupData[scoreAttr]) + "\n\n"
         resultString += str(confusionMatrixGroup) + "\n\n"
 

@@ -12,7 +12,7 @@ from faim.visualization.plots import plotScoreHistsPerGroup
 
 DEBUG_SA = 0
 DEBUG_SIGMA = 1
-SA_COLNAME = "SA_scores"
+SA_COLNAME = "SA"
 
 
 class FairInterpolationMethod:
