@@ -134,11 +134,11 @@ In each example, a FAIM post-processor is trained and evaluated with results sav
   ```bash
   faim-experiment --run synthetic-from-paper 0.1 1,1,1,1,1,1 prepared-data/synthetic/2groups/2022-01-12/dataset.csv
   ```
-  
+
 Note, that at the moment we do not allow all thetas to be 0.
 
 #### Visualize and Evaluate Results
-During the calculation the faim-algorithm creates a lot of plots that will help you to evaluate your results visually. You'll find them in the respective result folder of your experimental run, e.g., for experiment 
+During the calculation the faim-algorithm creates a lot of plots that will help you to evaluate your results visually. You'll find them in the respective result folder of your experimental run, e.g., for experiment
   `faim-experiment --run synthetic-from-paper 0.1 1,0,0,1,0,0 prepared-data/synthetic/2groups/2022-01-12/dataset.csv`
 all results are saved to `results/synthetic/2groups/2022-01-12/1,0,0,1,0,0/`.
 
