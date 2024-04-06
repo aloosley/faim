@@ -66,6 +66,7 @@ If you're on a Mac, you can install the LaTeX distribution MacTeX using [brew ca
 ```bash
 brew install --cask mactex
 ```
+Don't forget to restart your terminal before using the `faim` CLI.
 
 ## Usage
 Installing faim also (currently) installs one command line interface (CLI) tool, `faim-experiment` which can be
