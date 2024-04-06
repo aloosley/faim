@@ -57,6 +57,17 @@ From the environment where you installed the package, run
 pip uninstall faim
 ```
 
+### Latex
+Many of the figures are rendered with LaTeX (via Matplotlib) and require latex be installed.
+
+See [this Matplotlib documentation page](https://matplotlib.org/stable/users/explain/text/usetex.html#text-rendering-with-latex) for instructions.
+
+If you're on a Mac, you can install the LaTeX distribution MacTeX using [brew cask](https://formulae.brew.sh/cask/):
+```bash
+brew install --cask mactex
+```
+Don't forget to restart your terminal before using the `faim` CLI.
+
 ## Usage
 Installing faim also (currently) installs one command line interface (CLI) tool, `faim-experiment` which can be
 used to reproduce the work in the paper.

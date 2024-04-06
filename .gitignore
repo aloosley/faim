@@ -20,3 +20,6 @@ settings.json
 
 # Results
 results/
+
+# MacOS
+.DS_Store
