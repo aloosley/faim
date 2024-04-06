@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-20.04]
-        python: [3.9.13, 3.10.4, 3.11.0]
+        python: [3.7.13, 3.12.4]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
