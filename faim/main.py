@@ -107,7 +107,7 @@ def interpolate_fairly(
         score_stepsize=score_stepsize,
         thetas=thetas,
         regForOT=optimal_transport_regularization,
-        path=result_dir,
+        output_dir=result_dir,
         plot=True,
     )
     result = fair_interpolation_method.run()
@@ -177,7 +177,7 @@ def main(argv: Optional[List[str]] = None):
         # dict
         thetas_array: NDArray[np.float64] = parse_thetas_arg(args.run[2])
 
-        # create result directory with matching subdir structure as in data folder, assuming relative path
+        # create result directory with matching subdir structure as in data folder, assuming relative output_dir
         data_filepath = Path(args.run[3])
         if not data_filepath.exists():
             raise FileNotFoundError(f"Data file not found: {data_filepath}")

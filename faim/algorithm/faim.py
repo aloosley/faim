@@ -42,7 +42,7 @@ class FairInterpolationMethod:
         score_stepsize: float,
         thetas: Dict[int, NDArray[np.float64]],
         regForOT: float,
-        path: Path = Path("."),
+        output_dir: Path = Path("."),
         plot: bool = False,
     ):
         """
@@ -60,7 +60,7 @@ class FairInterpolationMethod:
             optimal_transport_regularization {float} -- regularization parameter for optimal transport, see ot docs for details
 
         Keyword Arguments:
-            path {Path} -- [description] (default: {'.'})
+            output_dir {Path} -- [description] (default: {'.'})
             plot {bool} -- tells if plots shall be generated (default: {False})
         """
 
@@ -69,7 +69,7 @@ class FairInterpolationMethod:
 
         # have some convenience for plots
         self._groups = group_names
-        self._plot_dir = path
+        self._plot_dir = output_dir
         self._plot = plot
 
         # calculate bin edges to truncate scores, for histograms and loss matrix size
