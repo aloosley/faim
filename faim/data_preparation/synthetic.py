@@ -1,45 +1,113 @@
 import uuid
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
+from numpy._typing import NDArray
+from numpy.random import Generator
 
 
 class SyntheticGroupedDatasetBuilder:
-    def __init__(self, size: int, group_names: list[str]) -> None:
-        self.size = size
+    def __init__(
+        self, group_names: list[str], n_by_group: list[int], random_generator: Optional[Generator] = None
+    ) -> None:
+        if len(group_names) != len(n_by_group):
+            raise ValueError("group_names and n_by_group must have the same length")
+
         self.group_names = group_names
+        self.n_by_group = n_by_group
+
+        if random_generator is None:
+            random_generator = np.random.default_rng()
+        self.random_generator = random_generator
 
     def build(self) -> pd.DataFrame:
         raise NotImplementedError
 
-    @staticmethod
-    def _init_empty_dataset(size: int, n_groups: int) -> pd.DataFrame:
-        df_synth = pd.DataFrame()
-        df_synth["group"] = np.random.randint(low=0, high=n_groups, size=size)
-        df_synth["uuid"] = [uuid.uuid4().int for _ in range(size)]
-        return df_synth
+    def _init_empty_dataset(self) -> pd.DataFrame:
+        return pd.DataFrame(columns=["uuid", "group", "true_score", "pred_score"])
 
 
 class NormalSyntheticGroupedDatasetBuilder(SyntheticGroupedDatasetBuilder):
-    def __init__(self, size: int, group_names: list[str], correlation_matrix: np.ndarray[np.float32]) -> None:
-        self._validate_corrleation_matrix(correlation_matrix=correlation_matrix, group_names=group_names)
-        super().__init__(size=size, group_names=group_names)
+    def __init__(
+        self,
+        group_names: list[str],
+        n_by_group: list[int],
+        truth_prediction_means_by_group: list[NDArray[np.float32]],
+        truth_prediction_correlation_matrixs_by_group: list[NDArray[np.float32]],
+        random_generator: Optional[Generator] = None,
+    ) -> None:
+        super().__init__(n_by_group=n_by_group, group_names=group_names, random_generator=random_generator)
+
+        self._validate_means_and_corrleations(
+            truth_prediction_means_by_group=truth_prediction_means_by_group,
+            truth_prediction_correlation_matrixs_by_group=truth_prediction_correlation_matrixs_by_group,
+            group_names=group_names,
+        )
+
+        self.truth_prediction_means_by_group = truth_prediction_means_by_group
+        self.truth_prediction_correlation_matrixs_by_group = truth_prediction_correlation_matrixs_by_group
 
     def build(self) -> pd.DataFrame:
-        df_synth = self._init_empty_dataset(size=self.size, n_groups=len(self.group_names))
-        return df_synth
+        synth_data = self._init_empty_dataset()
+
+        for group_idx, (means, correlation_matrix, n) in enumerate(
+            zip(
+                self.truth_prediction_means_by_group,
+                self.truth_prediction_correlation_matrixs_by_group,
+                self.n_by_group,
+            )
+        ):
+            snyth_data_group = pd.DataFrame(
+                self.random_generator.multivariate_normal(means, correlation_matrix, size=n),
+                columns=["true_score", "pred_score"],
+            )
+            snyth_data_group["group"] = group_idx
+            snyth_data_group["uuid"] = [uuid.uuid4().int for _ in range(n)]
+
+            synth_data = pd.concat([synth_data, snyth_data_group])
+
+        # Shuffle
+        synth_data = synth_data.sample(frac=1, replace=False, random_state=self.random_generator)
+
+        # Assign labels
+        boundary = synth_data["true_score"].mean()
+        synth_data["true_label"] = 0
+        synth_data.loc[synth_data["true_score"] >= boundary, "true_label"] = 1
+        synth_data["pred_label"] = 0
+        synth_data.loc[synth_data["pred_score"] >= boundary, "pred_label"] = 1
+
+        return synth_data
 
     @staticmethod
-    def _validate_corrleation_matrix(correlation_matrix: np.ndarray[np.float32], group_names: list[str]) -> None:
-        if len(correlation_matrix.shape) != 2:
-            raise ValueError("Correlation matrix must be 2D")
+    def _validate_means_and_corrleations(
+        truth_prediction_means_by_group: list[NDArray[np.float32]],
+        truth_prediction_correlation_matrixs_by_group: list[NDArray[np.float32]],
+        group_names: list[str],
+    ) -> None:
+        if len(truth_prediction_means_by_group) != len(truth_prediction_correlation_matrixs_by_group):
+            raise ValueError(
+                "truth_prediction_means_by_group and truth_prediction_correlation_matrixs_by_group must have the same length (number of groups)"
+            )
 
-        if correlation_matrix.shape[0] != correlation_matrix.shape[1]:
-            raise ValueError("Correlation matrix must be square")
+        if len(truth_prediction_means_by_group) != len(group_names):
+            raise ValueError("truth_prediction_means_by_group must have one entry per group")
 
-        if correlation_matrix.shape[0] != len(group_names):
-            raise ValueError("Correlation matrix must have the same number of rows as group_names")
+        for means, correlation_matrix in zip(
+            truth_prediction_means_by_group, truth_prediction_correlation_matrixs_by_group
+        ):
+            if len(means.shape) != 1:
+                raise ValueError("Means must be 1D")
+
+            if means.shape[0] != 2:
+                raise ValueError("Means must be of length 2, one for true_score and one for pred_score")
+
+            if len(correlation_matrix.shape) != 2:
+                raise ValueError("Correlation matrix must be 2D")
+
+            if correlation_matrix.shape[0] != 2:
+                raise ValueError("Correlation matrices must be 2x2")
 
 
 class SyntheticDatasetCreator(object):
