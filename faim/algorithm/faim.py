@@ -1,11 +1,14 @@
 import math
 import os
+from pathlib import Path
+from typing import Dict
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import ot
 import pandas as pd
+from numpy._typing import NDArray
 
 from faim.util.util import normalizeRowsToOne, scoresByGroup
 from faim.visualization.plots import plotScoreHistsPerGroup
@@ -33,20 +36,20 @@ class FairInterpolationMethod:
 
     def __init__(
         self,
-        rawData,
-        group_names,
-        pred_score,
-        score_stepsize,
-        thetas,
-        regForOT,
-        path=".",
-        plot=False,
+        rawData: pd.DataFrame,
+        group_names: Dict[int, str],
+        pred_score_column: str,
+        score_stepsize: float,
+        thetas: Dict[int, NDArray[np.float64]],
+        regForOT: float,
+        path: Path = Path("."),
+        plot: bool = False,
     ):
         """
         Arguments:
             rawData {dataframe} -- contains data points as rows and features as columns
             group_names {dict} -- translates from group indicators to group names as strings
-            pred_score {string} -- name of column that contains the prediction scores
+            pred_score_column {string} -- name of column that contains the prediction scores
             score_stepsize {float} -- stepsize between two scores
             thetas {dict} -- keys: group names as int
                              values: vectors of 3 parameters per group,
@@ -57,28 +60,28 @@ class FairInterpolationMethod:
             optimal_transport_regularization {float} -- regularization parameter for optimal transport, see ot docs for details
 
         Keyword Arguments:
-            path {str} -- [description] (default: {'.'})
+            path {Path} -- [description] (default: {'.'})
             plot {bool} -- tells if plots shall be generated (default: {False})
         """
 
         self._data = rawData
-        self._predScoreTruncated = pred_score + "_truncated"
+        self._predScoreTruncated = pred_score_column + "_truncated"
 
         # have some convenience for plots
         self._groups = group_names
-        self._plotPath = path
+        self._plot_dir = path
         self._plot = plot
 
         # calculate bin edges to truncate scores, for histograms and loss matrix size
         self._binEdges = np.arange(
-            rawData[pred_score].min() - score_stepsize,
-            rawData[pred_score].max() + score_stepsize,
+            rawData[pred_score_column].min() - score_stepsize,
+            rawData[pred_score_column].max() + score_stepsize,
             score_stepsize,
         )
         self._numBins = int(len(self._binEdges) - 1)
 
         # group predicted scores into bins
-        self._data[self._predScoreTruncated] = pd.cut(self._data[pred_score], bins=self._binEdges, labels=False)
+        self._data[self._predScoreTruncated] = pd.cut(self._data[pred_score_column], bins=self._binEdges, labels=False)
 
         # normalize data to range in [0, 1]
         x = self._data[self._predScoreTruncated]
@@ -89,11 +92,11 @@ class FairInterpolationMethod:
 
         if self._plot:
             plotScoreHistsPerGroup(
-                self._data,
-                self._binEdges,
-                [self._predScoreTruncated],
-                os.path.join(self._plotPath, "truncatedRawScoreDistributionPerGroup.png"),
-                self._groups,
+                data=self._data,
+                binArray=self._binEdges,
+                scoreNames=[self._predScoreTruncated],
+                filename=self._plot_dir / "truncatedRawScoreDistributionPerGroup.png",
+                groups=self._groups,
                 xTickLabels=self._binEdges[:].round(decimals=2),
             )
 
@@ -139,7 +142,7 @@ class FairInterpolationMethod:
                 label.set_visible(False)
             cnt += 1
         ax.set_ylim(ymin=yMin, ymax=yMax)
-        plt.savefig(os.path.join(self._plotPath, filename), dpi=100, bbox_inches="tight")
+        plt.savefig(os.path.join(self._plot_dir, filename), dpi=100, bbox_inches="tight")
         plt.cla()
         plt.close()
 
@@ -209,7 +212,7 @@ class FairInterpolationMethod:
             if self._plot:
                 plt.imshow(ot_matrix)
                 plt.savefig(
-                    os.path.join(self._plotPath, "OTMatrix_group=" + str(groupName) + ".png"),
+                    os.path.join(self._plot_dir, "OTMatrix_group=" + str(groupName) + ".png"),
                     dpi=100,
                     bbox_inches="tight",
                 )
@@ -267,7 +270,7 @@ class FairInterpolationMethod:
                 raw,
                 fairEdges,
                 [newScores_colName, self._predScoreTruncated],
-                os.path.join(self._plotPath, newScores_colName + "DistributionPerGroup.png"),
+                os.path.join(self._plot_dir, newScores_colName + "DistributionPerGroup.png"),
                 self._groups,
                 xTickLabels=roundedFairEdges,
             )
@@ -278,7 +281,7 @@ class FairInterpolationMethod:
                 fairEdges,
                 [newScores_colName],
                 os.path.join(
-                    self._plotPath,
+                    self._plot_dir,
                     newScores_colName + "DistributionPerGroup_truePositives.png",
                 ),
                 self._groups,
@@ -290,7 +293,7 @@ class FairInterpolationMethod:
                 fairEdges,
                 [newScores_colName],
                 os.path.join(
-                    self._plotPath,
+                    self._plot_dir,
                     newScores_colName + "DistributionPerGroup_trueNegatives.png",
                 ),
                 self._groups,
@@ -349,7 +352,7 @@ class FairInterpolationMethod:
                 self._binEdges,
                 [self._predScoreTruncated],
                 os.path.join(
-                    self._plotPath,
+                    self._plot_dir,
                     "predScoresPerGroupWithCondition_" + conditionCol + "=" + str(conditionVal) + "_AsHistograms.png",
                 ),
                 self._groups,

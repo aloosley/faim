@@ -77,7 +77,7 @@ def interpolate_fairly(
     thetas: Dict[int, NDArray[np.float64]],
     result_dir: Path,
     data_filepath: Path,
-    pred_score: str,
+    pred_score_column: str,
     group_names: Dict[int, str],
     optimal_transport_regularization: float,
 ):
@@ -103,7 +103,7 @@ def interpolate_fairly(
     fair_interpolation_method = FairInterpolationMethod(
         rawData=data,
         group_names=group_names,
-        pred_score=pred_score,
+        pred_score_column=pred_score_column,
         score_stepsize=score_stepsize,
         thetas=thetas,
         regForOT=optimal_transport_regularization,
@@ -216,7 +216,7 @@ def main(argv: Optional[List[str]] = None):
             thetas=thetas,
             result_dir=results_dir,
             data_filepath=data_filepath,
-            pred_score="pred_score",
+            pred_score_column="pred_score",
             group_names=group_names,
             optimal_transport_regularization=optimal_transport_regularization,
         )
