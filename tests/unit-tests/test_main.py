@@ -27,7 +27,7 @@ def test_run_on_synthetic_data_from_paper() -> None:
     # GIVEN temporary location for stored data
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
-        temp_dir = Path("./temp-dir")
+        # temp_dir = Path("./temp-dir")
 
         with patch("faim.main.OUTPUT_DIR", temp_dir):
             expected_prepared_data_directory = Path(
