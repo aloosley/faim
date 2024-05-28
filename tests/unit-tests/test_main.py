@@ -23,7 +23,7 @@ def test_main_prepare_synthetic_data() -> None:
             assert (expected_prepared_data_directory / "dataset.csv").exists()
 
 
-def test_run_on_synthetic_data() -> None:
+def test_run_on_synthetic_data_from_paper() -> None:
     # GIVEN temporary location for stored data
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir = Path(temp_dir)
@@ -35,7 +35,7 @@ def test_run_on_synthetic_data() -> None:
             )
 
             # GIVEN synthetic data prepared
-            main(["--prepare-data", "synthetic-generated"])
+            main(["--prepare-data", "synthetic-from-paper"])
 
             # WHEN running experiment on synthetic data
             main(
