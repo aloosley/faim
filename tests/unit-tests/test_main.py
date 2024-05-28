@@ -30,9 +30,7 @@ def test_run_on_synthetic_data_from_paper() -> None:
         # temp_dir = Path("./temp-dir")
 
         with patch("faim.main.OUTPUT_DIR", temp_dir):
-            expected_prepared_data_directory = Path(
-                f"{temp_dir}/synthetic/2groups/{datetime.today().strftime('%Y-%m-%d')}"
-            )
+            expected_prepared_data_directory = Path(f"{temp_dir}/synthetic/2groups/2022-01-12")
 
             # GIVEN synthetic data prepared
             main(["--prepare-data", "synthetic-from-paper"])
