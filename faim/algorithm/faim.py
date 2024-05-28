@@ -54,7 +54,7 @@ class FairInterpolationMethod:
                              the barycenter between the three mutually exclusive fairness definitions
                              theta of 1 means that a score distribution is going to match the barycenter
                              theta of 0 means that a score distribution stays exactly where it is
-            regForOT {float} -- regularization parameter for optimal transport, see ot docs for details
+            optimal_transport_regularization {float} -- regularization parameter for optimal transport, see ot docs for details
 
         Keyword Arguments:
             path {str} -- [description] (default: {'.'})
