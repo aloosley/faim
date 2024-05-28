@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 from typing import Dict
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import ot
@@ -69,6 +68,9 @@ class FairInterpolationMethod:
 
         # have some convenience for plots
         self._groups = group_names
+        if not plot_dir.exists():
+            plot_dir.mkdir(parents=True)
+
         self._plot_dir = plot_dir
         self._plot = plot
 
@@ -91,7 +93,6 @@ class FairInterpolationMethod:
         self._binEdges = (y - min(y)) / (max(y) - min(y))
 
         if self._plot:
-            self._plot_dir.mkdir(parents=True)
             plotScoreHistsPerGroup(
                 data=self._data,
                 binArray=self._binEdges,
