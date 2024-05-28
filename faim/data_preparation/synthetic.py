@@ -5,6 +5,43 @@ import numpy as np
 import pandas as pd
 
 
+class SyntheticGroupedDatasetBuilder:
+    def __init__(self, size: int, group_names: list[str]) -> None:
+        self.size = size
+        self.group_names = group_names
+
+    def build(self) -> pd.DataFrame:
+        raise NotImplementedError
+
+    @staticmethod
+    def _init_empty_dataset(size: int, n_groups: int) -> pd.DataFrame:
+        df_synth = pd.DataFrame()
+        df_synth["group"] = np.random.randint(low=0, high=n_groups, size=size)
+        df_synth["uuid"] = [uuid.uuid4().int for _ in range(size)]
+        return df_synth
+
+
+class NormalSyntheticGroupedDatasetBuilder(SyntheticGroupedDatasetBuilder):
+    def __init__(self, size: int, group_names: list[str], correlation_matrix: np.ndarray[np.float32]) -> None:
+        self._validate_corrleation_matrix(correlation_matrix=correlation_matrix, group_names=group_names)
+        super().__init__(size=size, group_names=group_names)
+
+    def build(self) -> pd.DataFrame:
+        df_synth = self._init_empty_dataset(size=self.size, n_groups=len(self.group_names))
+        return df_synth
+
+    @staticmethod
+    def _validate_corrleation_matrix(correlation_matrix: np.ndarray[np.float32], group_names: list[str]) -> None:
+        if len(correlation_matrix.shape) != 2:
+            raise ValueError("Correlation matrix must be 2D")
+
+        if correlation_matrix.shape[0] != correlation_matrix.shape[1]:
+            raise ValueError("Correlation matrix must be square")
+
+        if correlation_matrix.shape[0] != len(group_names):
+            raise ValueError("Correlation matrix must have the same number of rows as group_names")
+
+
 class SyntheticDatasetCreator(object):
     @property
     def dataset(self):
@@ -17,7 +54,7 @@ class SyntheticDatasetCreator(object):
     def __init__(self, size: int, group_count: int) -> None:
         """
         @param size:                            total number of data points to be created
-        @param group_count:                      total number of groups
+        @param group_count:                     total number of groups
         """
 
         self.__dataset = pd.DataFrame()
