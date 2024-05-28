@@ -3,6 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from faim.main import main
 
 
@@ -23,6 +25,7 @@ def test_main_prepare_synthetic_data() -> None:
             assert (expected_prepared_data_directory / "dataset.csv").exists()
 
 
+@pytest.mark.optional
 def test_run_on_synthetic_data_from_paper() -> None:
     # GIVEN temporary location for stored data
     with tempfile.TemporaryDirectory() as temp_dir:

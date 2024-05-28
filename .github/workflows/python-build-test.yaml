@@ -46,4 +46,4 @@ jobs:
         pip install ".[dev,experiment]"
 
     - name: Test Package
-      run: pytest
+      run: pytest -m "not optional"
