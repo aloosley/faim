@@ -112,18 +112,18 @@ class FairInterpolationMethod:
         self, dataframe, filename, xLabel="", yLabel="", xTickLabels=None, yMin=None, yMax=None, isTransportMap=False
     ):
         # FIXME: move this to visualization package?
-        mpl.rcParams.update(
-            {
-                "font.size": 24,
-                "lines.linewidth": 3,
-                "lines.markersize": 15,
-                "font.family": "Times New Roman",
-            }
-        )
-        # avoid type 3 (i.e. bitmap) fonts in figures
-        mpl.rcParams["ps.useafm"] = True
-        mpl.rcParams["pdf.use14corefonts"] = True
-        mpl.rcParams["text.usetex"] = True
+        # mpl.rcParams.update(
+        #     {
+        #         "font.size": 24,
+        #         "lines.linewidth": 3,
+        #         "lines.markersize": 15,
+        #         "font.family": "Times New Roman",
+        #     }
+        # )
+        # # avoid type 3 (i.e. bitmap) fonts in figures
+        # mpl.rcParams["ps.useafm"] = True
+        # mpl.rcParams["pdf.use14corefonts"] = True
+        # mpl.rcParams["text.usetex"] = True
 
         ax = dataframe.plot(kind="bar", use_index=True, legend=False, width=1, figsize=(16, 8))
         if isTransportMap:
