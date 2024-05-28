@@ -74,11 +74,11 @@ def download_synthetic_data(
 
 def interpolate_fairly(
     score_stepsize: float,
-    thetas: dict[int, NDArray[np.float64]],
+    thetas: Dict[int, NDArray[np.float64]],
     result_dir: Path,
     data_filepath: Path,
     pred_score: str,
-    group_names: dict[int, str],
+    group_names: Dict[int, str],
     optimal_transport_regularization: float,
 ):
     data = pd.read_csv(data_filepath, sep=",")
