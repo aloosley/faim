@@ -105,7 +105,7 @@ class FairInterpolationMethod:
         self._thetas = thetas
         self._regForOT = regForOT
 
-    def _plot(
+    def _plott(
         self, dataframe, filename, xLabel="", yLabel="", xTickLabels=None, yMin=None, yMax=None, isTransportMap=False
     ):
         # FIXME: move this to visualization package?
@@ -222,7 +222,7 @@ class FairInterpolationMethod:
             fairScoreTranslationPerGroup[groupName] = np.matmul(normalized_ot_matrix, self._binEdges[:-1].T)
 
         if self._plot:
-            self._plot(
+            self._plott(
                 fairScoreTranslationPerGroup,
                 "fairScoreReplacementStrategy.png",
                 xLabel="raw score",
@@ -320,7 +320,7 @@ class FairInterpolationMethod:
         SA_scoresByGroup = scoresByGroup(self._data, list(self._groups.keys()), SA_COLNAME)
         muA_perGroup = self._dataToHistograms(SA_scoresByGroup)
         if self._plot:
-            self._plot(muA_perGroup, "muA_PerGroup.png", xLabel="muA score", yLabel="density")
+            self._plott(muA_perGroup, "muA_PerGroup.png", xLabel="muA score", yLabel="density")
         # clean up SA_column, it's not needed anymore
         # self._data = self._data.drop(columns=[SA_COLNAME])
         return muA_perGroup
@@ -374,7 +374,7 @@ class FairInterpolationMethod:
         sigmaPerGroup = numerator / groupSizes.values
 
         if self._plot:
-            self._plot(
+            self._plott(
                 sigmaPerGroup,
                 "sigmaPerGroup_" + conditionCol + "=" + str(conditionVal) + ".png",
                 xLabel="normalized score",
@@ -405,7 +405,7 @@ class FairInterpolationMethod:
             + str(sigmaBar.sum())
         )
         if self._plot:
-            self._plot(pd.DataFrame(sigmaBar), plotFilename, xLabel="normalized score")
+            self._plott(pd.DataFrame(sigmaBar), plotFilename, xLabel="normalized score")
 
         # create a dataframe with sigmaBar as barycenter for each group
         sigmaBars = pd.DataFrame()
@@ -430,7 +430,7 @@ class FairInterpolationMethod:
         newScoresByGroup = scoresByGroup(self._data, self._data["group"].unique(), colName)
         muTPerGroup = self._dataToHistograms(newScoresByGroup)
         if self._plot:
-            self._plot(
+            self._plott(
                 muTPerGroup,
                 colName + "DistributionPerGroup.png",
                 xLabel=colName + " score",
@@ -457,7 +457,7 @@ class FairInterpolationMethod:
             barycenters["muB"] = muB_perGroup[group]
             barycenters["muC"] = muC_perGroup[group]
 
-            self._plot(
+            self._plott(
                 pd.DataFrame(barycenters),
                 "muAmuBmuC_group=" + str(group) + ".png",
                 xLabel="mu score",
@@ -473,7 +473,7 @@ class FairInterpolationMethod:
             if barycenters["muC"].sum() != 1:
                 s = barycenters["muC"].sum()
                 barycenters["muC"] /= s
-            self._plot(
+            self._plott(
                 pd.DataFrame(barycenters),
                 "muAmuBmuC_normalized_group=" + str(group) + ".png",
                 xLabel="mu score",
@@ -487,7 +487,7 @@ class FairInterpolationMethod:
                 log=True,
             )[0]
             if self._plot:
-                self._plot(
+                self._plott(
                     pd.DataFrame(groupFinalBarycenters[group]),
                     "finalBarycenter_group=" + str(group) + ".png",
                     xTickLabels=self._binEdges[:-1].round(decimals=2),
@@ -496,7 +496,7 @@ class FairInterpolationMethod:
 
         # plot all barycenters in one image for better comparison
         if self._plot:
-            self._plot(
+            self._plott(
                 pd.DataFrame(groupFinalBarycenters),
                 "finalBarycenters.png",
                 xTickLabels=self._binEdges[:-1].round(decimals=2),
