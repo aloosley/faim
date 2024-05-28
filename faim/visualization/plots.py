@@ -1,7 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 from faim.util import util
-import numpy as np
 
 
 def plotKDEPerGroup(data, groups, score_attr, filename, use_tex: bool = False):
