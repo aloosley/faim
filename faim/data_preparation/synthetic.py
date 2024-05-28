@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import pandas as pd
@@ -10,7 +10,7 @@ from numpy.random import Generator
 
 class SyntheticGroupedDatasetBuilder:
     def __init__(
-        self, group_names: list[str], n_by_group: list[int], random_generator: Optional[Generator] = None
+        self, group_names: List[str], n_by_group: List[int], random_generator: Optional[Generator] = None
     ) -> None:
         if len(group_names) != len(n_by_group):
             raise ValueError("group_names and n_by_group must have the same length")
@@ -32,10 +32,10 @@ class SyntheticGroupedDatasetBuilder:
 class NormalSyntheticGroupedDatasetBuilder(SyntheticGroupedDatasetBuilder):
     def __init__(
         self,
-        group_names: list[str],
-        n_by_group: list[int],
-        truth_prediction_means_by_group: list[NDArray[np.float32]],
-        truth_prediction_correlation_matrixs_by_group: list[NDArray[np.float32]],
+        group_names: List[str],
+        n_by_group: List[int],
+        truth_prediction_means_by_group: List[NDArray[np.float32]],
+        truth_prediction_correlation_matrixs_by_group: List[NDArray[np.float32]],
         random_generator: Optional[Generator] = None,
     ) -> None:
         super().__init__(n_by_group=n_by_group, group_names=group_names, random_generator=random_generator)
@@ -82,9 +82,9 @@ class NormalSyntheticGroupedDatasetBuilder(SyntheticGroupedDatasetBuilder):
 
     @staticmethod
     def _validate_means_and_corrleations(
-        truth_prediction_means_by_group: list[NDArray[np.float32]],
-        truth_prediction_correlation_matrixs_by_group: list[NDArray[np.float32]],
-        group_names: list[str],
+        truth_prediction_means_by_group: List[NDArray[np.float32]],
+        truth_prediction_correlation_matrixs_by_group: List[NDArray[np.float32]],
+        group_names: List[str],
     ) -> None:
         if len(truth_prediction_means_by_group) != len(truth_prediction_correlation_matrixs_by_group):
             raise ValueError(
