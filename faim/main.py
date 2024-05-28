@@ -107,7 +107,7 @@ def interpolate_fairly(
         score_stepsize=score_stepsize,
         thetas=thetas,
         regForOT=optimal_transport_regularization,
-        output_dir=result_dir,
+        plot_dir=result_dir,
         plot=True,
     )
     result = fair_interpolation_method.run()
@@ -170,14 +170,14 @@ def main(argv: Optional[List[str]] = None):
     elif args.prepare_data == ["zalando"]:
         raise ValueError("The Zalando dataset has not yet been released. Please contact the authors for more info.")
 
-        # ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
+        # ZalandoDataset(input_filepath=input_filepath, plot_dir=OUTPUT_DIR / "zalando")
     elif args.run:
         score_stepsize = float(args.run[1])
         # FIXME: thetas are given as np matrix in same order of group names that are defined below, because I did not find a way to pass them as
         # dict
         thetas_array: NDArray[np.float64] = parse_thetas_arg(args.run[2])
 
-        # create result directory with matching subdir structure as in data folder, assuming relative output_dir
+        # create result directory with matching subdir structure as in data folder, assuming relative plot_dir
         data_filepath = Path(args.run[3])
         if not data_filepath.exists():
             raise FileNotFoundError(f"Data file not found: {data_filepath}")
