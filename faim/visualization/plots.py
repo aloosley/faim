@@ -1,23 +1,23 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 from faim.util import util
-import numpy as np
 
 
-def plotKDEPerGroup(data, groups, score_attr, filename):
+def plotKDEPerGroup(data, groups, score_attr, filename, use_tex: bool = False):
 
-    mpl.rcParams.update(
-        {
-            "font.size": 24,
-            "lines.linewidth": 3,
-            "lines.markersize": 15,
-            "font.family": "Times New Roman",
-        }
-    )
-    # avoid type 3 (i.e. bitmap) fonts in figures
-    mpl.rcParams["ps.useafm"] = True
-    mpl.rcParams["pdf.use14corefonts"] = True
-    mpl.rcParams["text.usetex"] = True
+    # mpl.rcParams.update(
+    #     {
+    #         "font.size": 24,
+    #         "lines.linewidth": 3,
+    #         "lines.markersize": 15,
+    #         "font.family": "Times New Roman",
+    #     }
+    # )
+    # # avoid type 3 (i.e. bitmap) fonts in figures
+    # mpl.rcParams["ps.useafm"] = True
+    # mpl.rcParams["pdf.use14corefonts"] = True
+    # mpl.rcParams["text.usetex"] = use_tex
 
     scoresPerGroup = util.scoresByGroup(data, groups, score_attr)
     scoresPerGroup = scoresPerGroup.rename(groups, axis="columns")
@@ -29,20 +29,20 @@ def plotKDEPerGroup(data, groups, score_attr, filename):
     plt.savefig(filename, dpi=100, bbox_inches="tight")
 
 
-def plotScoreKDEsPerGroup(data, groups, scoreNames, boundary, filename, groupNames):
+def plotScoreKDEsPerGroup(data, groups, scoreNames, boundary, filename, groupNames, use_tex: bool = False):
 
-    mpl.rcParams.update(
-        {
-            "font.size": 24,
-            "lines.linewidth": 3,
-            "lines.markersize": 15,
-            "font.family": "Times New Roman",
-        }
-    )
-    # avoid type 3 (i.e. bitmap) fonts in figures
-    mpl.rcParams["ps.useafm"] = True
-    mpl.rcParams["pdf.use14corefonts"] = True
-    mpl.rcParams["text.usetex"] = True
+    # mpl.rcParams.update(
+    #     {
+    #         "font.size": 24,
+    #         "lines.linewidth": 3,
+    #         "lines.markersize": 15,
+    #         "font.family": "Times New Roman",
+    #     }
+    # )
+    # # avoid type 3 (i.e. bitmap) fonts in figures
+    # mpl.rcParams["ps.useafm"] = True
+    # mpl.rcParams["pdf.use14corefonts"] = True
+    # mpl.rcParams["text.usetex"] = use_tex
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -68,20 +68,22 @@ def plotScoreKDEsPerGroup(data, groups, scoreNames, boundary, filename, groupNam
     plt.cla()
 
 
-def plotScoreHistsPerGroup(data, binArray, scoreNames, filename, groups, xTickLabels=None, yMin=None, yMax=None):
+def plotScoreHistsPerGroup(
+    data, binArray, scoreNames, filename, groups, xTickLabels=None, yMin=None, yMax=None, use_tex: bool = False
+):
 
-    mpl.rcParams.update(
-        {
-            "font.size": 24,
-            "lines.linewidth": 3,
-            "lines.markersize": 15,
-            "font.family": "Times New Roman",
-        }
-    )
+    # mpl.rcParams.update(
+    #     {
+    #         "font.size": 24,
+    #         "lines.linewidth": 3,
+    #         "lines.markersize": 15,
+    #         "font.family": "Times New Roman",
+    #     }
+    # )
     # avoid type 3 (i.e. bitmap) fonts in figures
-    mpl.rcParams["ps.useafm"] = True
-    mpl.rcParams["pdf.use14corefonts"] = True
-    mpl.rcParams["text.usetex"] = True
+    # mpl.rcParams["ps.useafm"] = True
+    # mpl.rcParams["pdf.use14corefonts"] = True
+    # mpl.rcParams["text.usetex"] = use_tex
 
     fig = plt.figure(figsize=(16, 8))
     ax = fig.add_subplot(111)

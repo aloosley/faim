@@ -9,6 +9,20 @@ dist
 # PyCharm
 .idea
 
+# VSCode
+launch.json
+settings.json
+.env
+
 # Data
 *prepared-data*
 */prepared-data
+
+# Results
+results/
+
+# MacOS
+.DS_Store
+
+# Notebook checkpoints
+.ipynb_checkpoints

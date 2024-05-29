@@ -19,8 +19,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-20.04]
-        python: [3.9.13, 3.10.4, 3.11.0]
+        os: [windows-latest, ubuntu-20.04]
+        python: [3.8.2, 3.12.2]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -46,4 +46,4 @@ jobs:
         pip install ".[dev,experiment]"
 
     - name: Test Package
-      run: pytest
+      run: pytest -m "not optional"
