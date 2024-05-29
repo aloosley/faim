@@ -1,11 +1,13 @@
 import math
 import os
+from pathlib import Path
+from typing import Dict
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import ot
 import pandas as pd
+from numpy._typing import NDArray
 
 from faim.util.util import normalizeRowsToOne, scoresByGroup
 from faim.visualization.plots import plotScoreHistsPerGroup
@@ -33,20 +35,20 @@ class FairInterpolationMethod:
 
     def __init__(
         self,
-        rawData,
-        group_names,
-        pred_score,
-        score_stepsize,
-        thetas,
-        regForOT,
-        path=".",
-        plot=False,
+        rawData: pd.DataFrame,
+        group_names: Dict[int, str],
+        pred_score_column: str,
+        score_stepsize: float,
+        thetas: Dict[int, NDArray[np.float64]],
+        regForOT: float,
+        plot_dir: Path = Path("."),
+        plot: bool = False,
     ):
         """
         Arguments:
             rawData {dataframe} -- contains data points as rows and features as columns
             group_names {dict} -- translates from group indicators to group names as strings
-            pred_score {string} -- name of column that contains the prediction scores
+            pred_score_column {string} -- name of column that contains the prediction scores
             score_stepsize {float} -- stepsize between two scores
             thetas {dict} -- keys: group names as int
                              values: vectors of 3 parameters per group,
@@ -54,73 +56,76 @@ class FairInterpolationMethod:
                              the barycenter between the three mutually exclusive fairness definitions
                              theta of 1 means that a score distribution is going to match the barycenter
                              theta of 0 means that a score distribution stays exactly where it is
-            regForOT {float} -- regularization parameter for optimal transport, see ot docs for details
+            optimal_transport_regularization {float} -- regularization parameter for optimal transport, see ot docs for details
 
         Keyword Arguments:
-            path {str} -- [description] (default: {'.'})
+            plot_dir {Path} -- [description] (default: {'.'})
             plot {bool} -- tells if plots shall be generated (default: {False})
         """
 
-        self.__data = rawData
-        self.__predScoreTruncated = pred_score + "_truncated"
+        self._data = rawData
+        self._predScoreTruncated = pred_score_column + "_truncated"
 
         # have some convenience for plots
-        self.__groups = group_names
-        self.__plotPath = path
-        self.__plot = plot
+        self._groups = group_names
+        if not plot_dir.exists():
+            plot_dir.mkdir(parents=True)
+
+        self._plot_dir = plot_dir
+        self._plot = plot
 
         # calculate bin edges to truncate scores, for histograms and loss matrix size
-        self.__binEdges = np.arange(
-            rawData[pred_score].min() - score_stepsize,
-            rawData[pred_score].max() + score_stepsize,
+        self._binEdges = np.arange(
+            rawData[pred_score_column].min() - score_stepsize,
+            rawData[pred_score_column].max() + score_stepsize,
             score_stepsize,
         )
-        self.__numBins = int(len(self.__binEdges) - 1)
+        self._numBins = int(len(self._binEdges) - 1)
 
         # group predicted scores into bins
-        self.__data[self.__predScoreTruncated] = pd.cut(self.__data[pred_score], bins=self.__binEdges, labels=False)
+        self._data[self._predScoreTruncated] = pd.cut(self._data[pred_score_column], bins=self._binEdges, labels=False)
 
         # normalize data to range in [0, 1]
-        x = self.__data[self.__predScoreTruncated]
-        self.__data[self.__predScoreTruncated] = (x - min(x)) / (max(x) - min(x))
+        x = self._data[self._predScoreTruncated]
+        self._data[self._predScoreTruncated] = (x - min(x)) / (max(x) - min(x))
 
-        y = self.__binEdges
-        self.__binEdges = (y - min(y)) / (max(y) - min(y))
+        y = self._binEdges
+        self._binEdges = (y - min(y)) / (max(y) - min(y))
 
-        if self.__plot:
+        if self._plot:
             plotScoreHistsPerGroup(
-                self.__data,
-                self.__binEdges,
-                [self.__predScoreTruncated],
-                os.path.join(self.__plotPath, "truncatedRawScoreDistributionPerGroup.png"),
-                self.__groups,
-                xTickLabels=self.__binEdges[:].round(decimals=2),
+                data=self._data,
+                binArray=self._binEdges,
+                scoreNames=[self._predScoreTruncated],
+                filename=self._plot_dir / "truncatedRawScoreDistributionPerGroup.png",
+                groups=self._groups,
+                xTickLabels=self._binEdges[:].round(decimals=2),
             )
 
         # stuff for optimal transport
         # calculate loss matrix
-        self.__lossMatrix = ot.utils.dist0(self.__numBins)
-        self.__lossMatrix /= self.__lossMatrix.max()
+        self._lossMatrix = ot.utils.dist0(self._numBins)
+        self._lossMatrix /= self._lossMatrix.max()
 
-        self.__thetas = thetas
-        self.__regForOT = regForOT
+        self._thetas = thetas
+        self._regForOT = regForOT
 
-    def __plott(
+    def _plott(
         self, dataframe, filename, xLabel="", yLabel="", xTickLabels=None, yMin=None, yMax=None, isTransportMap=False
     ):
         # FIXME: move this to visualization package?
-        mpl.rcParams.update(
-            {
-                "font.size": 24,
-                "lines.linewidth": 3,
-                "lines.markersize": 15,
-                "font.family": "Times New Roman",
-            }
-        )
-        # avoid type 3 (i.e. bitmap) fonts in figures
-        mpl.rcParams["ps.useafm"] = True
-        mpl.rcParams["pdf.use14corefonts"] = True
-        mpl.rcParams["text.usetex"] = True
+        # mpl.rcParams.update(
+        #     {
+        #         "font.size": 24,
+        #         "lines.linewidth": 3,
+        #         "lines.markersize": 15,
+        #         "font.family": "Times New Roman",
+        #     }
+        # )
+        # # avoid type 3 (i.e. bitmap) fonts in figures
+        # mpl.rcParams["ps.useafm"] = True
+        # mpl.rcParams["pdf.use14corefonts"] = True
+        # mpl.rcParams["text.usetex"] = True
 
         ax = dataframe.plot(kind="bar", use_index=True, legend=False, width=1, figsize=(16, 8))
         if isTransportMap:
@@ -128,7 +133,7 @@ class FairInterpolationMethod:
             identityCol = pd.Series(np.linspace(0, 1, num=len(dataframe.index)))
             identityCol.plot.line(color="grey", linestyle="dashed")
         # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,
-        #           labels=self.__groups)
+        #           labels=self._groups)
         ax.set_xlabel(xLabel)
         ax.set_ylabel(yLabel)
         if xTickLabels is not None:
@@ -139,14 +144,14 @@ class FairInterpolationMethod:
                 label.set_visible(False)
             cnt += 1
         ax.set_ylim(ymin=yMin, ymax=yMax)
-        plt.savefig(os.path.join(self.__plotPath, filename), dpi=100, bbox_inches="tight")
+        plt.savefig(os.path.join(self._plot_dir, filename), dpi=100, bbox_inches="tight")
         plt.cla()
         plt.close()
 
     def _getRawScoresByGroupWithCondition(self, conditionCol, conditionVal):
         """
-        takes all values from truncated score column (self.__predScoreTruncated) and resorts data such that result contains all scores from
-        self.__predScoreTruncated in one column per group.
+        takes all values from truncated score column (self._predScoreTruncated) and resorts data such that result contains all scores from
+        self._predScoreTruncated in one column per group.
         Drops all rows where value in conditionCol does not match conditionVal
 
         Arguments:
@@ -158,8 +163,8 @@ class FairInterpolationMethod:
                            columns can contain NaNs if group sizes are not equal
         """
 
-        mask = self.__data[conditionCol] == conditionVal
-        return scoresByGroup(self.__data[mask], self.__data["group"].unique(), self.__predScoreTruncated)
+        mask = self._data[conditionCol] == conditionVal
+        return scoresByGroup(self._data[mask], self._data["group"].unique(), self._predScoreTruncated)
 
     def _dataToHistograms(self, data):
         """
@@ -174,9 +179,9 @@ class FairInterpolationMethod:
         """
 
         def hist(x):
-            return np.histogram(x[np.isfinite(x)], bins=self.__binEdges, density=False)[0]
+            return np.histogram(x[np.isfinite(x)], bins=self._binEdges, density=False)[0]
 
-        return pd.DataFrame({cn: hist(data[cn]) for cn in data.columns}, self.__binEdges[:-1])
+        return pd.DataFrame({cn: hist(data[cn]) for cn in data.columns}, self._binEdges[:-1])
 
     def _calculateFairReplacementStrategy(self, group_barycenters, group_histograms_raw):
         """
@@ -194,8 +199,8 @@ class FairInterpolationMethod:
                          raw score at index 1
         """
 
-        fairScoreTranslationPerGroup = pd.DataFrame(columns=self.__groups)
-        for groupName in self.__groups:
+        fairScoreTranslationPerGroup = pd.DataFrame(columns=self._groups)
+        for groupName in self._groups:
             # check that vectors are of same length
             if group_histograms_raw[groupName].shape != group_barycenters[groupName].shape:
                 raise ValueError("length of raw scores of group and group barycenters should be equal")
@@ -203,13 +208,13 @@ class FairInterpolationMethod:
             ot_matrix = ot.emd(
                 group_histograms_raw[groupName].to_numpy(),
                 group_barycenters[groupName].to_numpy(),
-                self.__lossMatrix,
+                self._lossMatrix,
             )
 
-            if self.__plot:
+            if self._plot:
                 plt.imshow(ot_matrix)
                 plt.savefig(
-                    os.path.join(self.__plotPath, "OTMatrix_group=" + str(groupName) + ".png"),
+                    os.path.join(self._plot_dir, "OTMatrix_group=" + str(groupName) + ".png"),
                     dpi=100,
                     bbox_inches="tight",
                 )
@@ -219,15 +224,15 @@ class FairInterpolationMethod:
 
             # this contains a vector per group with len(score_values) entries (e.g. a score range from 1 to 100)
             # results into a group fair score vector of length 100
-            fairScoreTranslationPerGroup[groupName] = np.matmul(normalized_ot_matrix, self.__binEdges[:-1].T)
+            fairScoreTranslationPerGroup[groupName] = np.matmul(normalized_ot_matrix, self._binEdges[:-1].T)
 
-        if self.__plot:
-            self.__plott(
+        if self._plot:
+            self._plott(
                 fairScoreTranslationPerGroup,
                 "fairScoreReplacementStrategy.png",
                 xLabel="raw score",
                 yLabel="fair replacement",
-                xTickLabels=self.__binEdges[:-1].round(decimals=2),
+                xTickLabels=self._binEdges[:-1].round(decimals=2),
                 yMin=0,
                 yMax=1,
                 isTransportMap=True,
@@ -241,19 +246,19 @@ class FairInterpolationMethod:
         Fair scores are given column-wise, with one column for each group.
         Matchings are identified by their indexes.
 
-        example: for a column, the original score at index 0 in @self.__binEdges will be replaced
+        example: for a column, the original score at index 0 in @self._binEdges will be replaced
                  with the fair score at index 0 in @fairScoreTranslationPerGroup
         """
 
         def replace(rawData):
             # raw scores of 1 are not translated because translation ranges from [0,1), so we set them to 1
             rawData[newScores_colName] = 1
-            rawScores = rawData[self.__predScoreTruncated]
+            rawScores = rawData[self._predScoreTruncated]
             groupName = rawData["group"].iloc[0]
             fairScores = fairScoreTranslationPerGroup[groupName]
             for index, fairScore in fairScores.iteritems():
-                range_left = self.__binEdges[index]
-                range_right = self.__binEdges[index + 1]
+                range_left = self._binEdges[index]
+                range_right = self._binEdges[index + 1]
                 replaceAtIndex = (rawScores >= range_left) & (rawScores < range_right)
                 rawData.loc[replaceAtIndex, newScores_colName] = fairScore
             return rawData
@@ -262,13 +267,13 @@ class FairInterpolationMethod:
 
         fairEdges = sorted(raw[newScores_colName].unique())
         roundedFairEdges = [round(elem, 2) for elem in fairEdges]
-        if self.__plot:
+        if self._plot:
             plotScoreHistsPerGroup(
                 raw,
                 fairEdges,
-                [newScores_colName, self.__predScoreTruncated],
-                os.path.join(self.__plotPath, newScores_colName + "DistributionPerGroup.png"),
-                self.__groups,
+                [newScores_colName, self._predScoreTruncated],
+                os.path.join(self._plot_dir, newScores_colName + "DistributionPerGroup.png"),
+                self._groups,
                 xTickLabels=roundedFairEdges,
             )
             # plot new scores for true positives and true negatives
@@ -278,10 +283,10 @@ class FairInterpolationMethod:
                 fairEdges,
                 [newScores_colName],
                 os.path.join(
-                    self.__plotPath,
+                    self._plot_dir,
                     newScores_colName + "DistributionPerGroup_truePositives.png",
                 ),
-                self.__groups,
+                self._groups,
                 xTickLabels=roundedFairEdges,
             )
             mask = raw["groundTruthLabel"] == 0
@@ -290,10 +295,10 @@ class FairInterpolationMethod:
                 fairEdges,
                 [newScores_colName],
                 os.path.join(
-                    self.__plotPath,
+                    self._plot_dir,
                     newScores_colName + "DistributionPerGroup_trueNegatives.png",
                 ),
-                self.__groups,
+                self._groups,
                 xTickLabels=roundedFairEdges,
             )
         return raw
@@ -310,19 +315,19 @@ class FairInterpolationMethod:
         S^A (and Eq. 2.1) ensures the following statement:
         the average predicted score of a group should equal its probability of being positive in the ground truth
         """
-        self.__data = self._compute_SA_scores(
-            self.__data,
+        self._data = self._compute_SA_scores(
+            self._data,
             "group",
-            self.__predScoreTruncated,
+            self._predScoreTruncated,
             "groundTruthLabel",
             SA_COLNAME,
         )
-        SA_scoresByGroup = scoresByGroup(self.__data, list(self.__groups.keys()), SA_COLNAME)
+        SA_scoresByGroup = scoresByGroup(self._data, list(self._groups.keys()), SA_COLNAME)
         muA_perGroup = self._dataToHistograms(SA_scoresByGroup)
-        if self.__plot:
-            self.__plott(muA_perGroup, "muA_PerGroup.png", xLabel="muA score", yLabel="density")
+        if self._plot:
+            self._plott(muA_perGroup, "muA_PerGroup.png", xLabel="muA score", yLabel="density")
         # clean up SA_column, it's not needed anymore
-        # self.__data = self.__data.drop(columns=[SA_COLNAME])
+        # self._data = self._data.drop(columns=[SA_COLNAME])
         return muA_perGroup
 
     def _calculate_sigmaBar_and_muT(self, conditionCol, conditionVal, colName, plotFilename):
@@ -343,17 +348,17 @@ class FairInterpolationMethod:
         groupScoresWithCondition = self._getRawScoresByGroupWithCondition(conditionCol, conditionVal)
         groupScoresWithConditionAsHist = self._dataToHistograms(groupScoresWithCondition)
 
-        if self.__plot:
+        if self._plot:
             plotScoreHistsPerGroup(
-                self.__data[self.__data[conditionCol] == conditionVal],
-                self.__binEdges,
-                [self.__predScoreTruncated],
+                self._data[self._data[conditionCol] == conditionVal],
+                self._binEdges,
+                [self._predScoreTruncated],
                 os.path.join(
-                    self.__plotPath,
+                    self._plot_dir,
                     "predScoresPerGroupWithCondition_" + conditionCol + "=" + str(conditionVal) + "_AsHistograms.png",
                 ),
-                self.__groups,
-                xTickLabels=self.__binEdges[:].round(decimals=2),
+                self._groups,
+                xTickLabels=self._binEdges[:].round(decimals=2),
             )
 
         # calculate numerator of Eq. 2.2 (turns out the denominator in λ^[+-]_t and ν_t are canceling each other out
@@ -367,19 +372,19 @@ class FairInterpolationMethod:
 
         # calculate group sizes in total and percent
         groupSizes = groupScoresWithCondition.count()
-        groupSizesPercent = groupSizes / len(self.__data.loc[self.__data[conditionCol] == conditionVal])
+        groupSizesPercent = groupSizes / len(self._data.loc[self._data[conditionCol] == conditionVal])
 
         # finally, calculate σ^[+-]_t (Eq.10):
         # divide previously calculated numerator by number of people per group who are truely negative (independent of s)
         sigmaPerGroup = numerator / groupSizes.values
 
-        if self.__plot:
-            self.__plott(
+        if self._plot:
+            self._plott(
                 sigmaPerGroup,
                 "sigmaPerGroup_" + conditionCol + "=" + str(conditionVal) + ".png",
                 xLabel="normalized score",
                 yLabel="Density",
-                xTickLabels=self.__binEdges[:-1].round(decimals=2),
+                xTickLabels=self._binEdges[:-1].round(decimals=2),
             )
 
         # check if integral over distribution of the two groups is equal (i.e. sum of values per group in histogram should be equal)
@@ -390,8 +395,8 @@ class FairInterpolationMethod:
         # compute general barycenter of all score distributions
         sigmaBar = ot.bregman.barycenter(
             sigmaPerGroup.to_numpy(),
-            self.__lossMatrix,
-            self.__regForOT,
+            self._lossMatrix,
+            self._regForOT,
             weights=groupSizesPercent.values,
             verbose=True,
             log=True,
@@ -404,12 +409,12 @@ class FairInterpolationMethod:
             + ": "
             + str(sigmaBar.sum())
         )
-        if self.__plot:
-            self.__plott(pd.DataFrame(sigmaBar), plotFilename, xLabel="normalized score")
+        if self._plot:
+            self._plott(pd.DataFrame(sigmaBar), plotFilename, xLabel="normalized score")
 
         # create a dataframe with sigmaBar as barycenter for each group
         sigmaBars = pd.DataFrame()
-        for group in self.__data["group"].unique():
+        for group in self._data["group"].unique():
             sigmaBars[group] = sigmaBar
 
         s = groupScoresWithConditionAsHist.sum()
@@ -418,19 +423,19 @@ class FairInterpolationMethod:
 
         # do translation only for those who are true negative (resp. true positive)
         # keep old scores for the others
-        self.__data[colName] = self.__data[self.__predScoreTruncated]
-        replacementIndices = self.__data[conditionCol] == conditionVal
-        self.__data.loc[replacementIndices, colName] = self._replaceRawByFairScores(
-            self.__data[self.__data[conditionCol] == conditionVal],
+        self._data[colName] = self._data[self._predScoreTruncated]
+        replacementIndices = self._data[conditionCol] == conditionVal
+        self._data.loc[replacementIndices, colName] = self._replaceRawByFairScores(
+            self._data[self._data[conditionCol] == conditionVal],
             scoreTranslation,
             colName,
         )
 
         # return the scores as distribution
-        newScoresByGroup = scoresByGroup(self.__data, self.__data["group"].unique(), colName)
+        newScoresByGroup = scoresByGroup(self._data, self._data["group"].unique(), colName)
         muTPerGroup = self._dataToHistograms(newScoresByGroup)
-        if self.__plot:
-            self.__plott(
+        if self._plot:
+            self._plott(
                 muTPerGroup,
                 colName + "DistributionPerGroup.png",
                 xLabel=colName + " score",
@@ -450,14 +455,14 @@ class FairInterpolationMethod:
         groupFinalBarycenters = pd.DataFrame()
         for group in muA_perGroup:
             # normalize each array of group thetas to add up to 1, because they will be used as barycenter weights later
-            groupThetas = np.array(self.__thetas.get(group)) / np.array(self.__thetas.get(group)).sum()
+            groupThetas = np.array(self._thetas.get(group)) / np.array(self._thetas.get(group)).sum()
 
             barycenters = pd.DataFrame()
             barycenters["muA"] = muA_perGroup[group]
             barycenters["muB"] = muB_perGroup[group]
             barycenters["muC"] = muC_perGroup[group]
 
-            self.__plott(
+            self._plott(
                 pd.DataFrame(barycenters),
                 "muAmuBmuC_group=" + str(group) + ".png",
                 xLabel="mu score",
@@ -473,39 +478,39 @@ class FairInterpolationMethod:
             if barycenters["muC"].sum() != 1:
                 s = barycenters["muC"].sum()
                 barycenters["muC"] /= s
-            self.__plott(
+            self._plott(
                 pd.DataFrame(barycenters),
                 "muAmuBmuC_normalized_group=" + str(group) + ".png",
                 xLabel="mu score",
             )
             groupFinalBarycenters[group] = ot.bregman.barycenter(
                 barycenters.to_numpy(),
-                self.__lossMatrix,
-                self.__regForOT,
+                self._lossMatrix,
+                self._regForOT,
                 weights=groupThetas,
                 verbose=True,
                 log=True,
             )[0]
-            if self.__plot:
-                self.__plott(
+            if self._plot:
+                self._plott(
                     pd.DataFrame(groupFinalBarycenters[group]),
                     "finalBarycenter_group=" + str(group) + ".png",
-                    xTickLabels=self.__binEdges[:-1].round(decimals=2),
+                    xTickLabels=self._binEdges[:-1].round(decimals=2),
                     xLabel="normalized score",
                 )
 
         # plot all barycenters in one image for better comparison
-        if self.__plot:
-            self.__plott(
+        if self._plot:
+            self._plott(
                 pd.DataFrame(groupFinalBarycenters),
                 "finalBarycenters.png",
-                xTickLabels=self.__binEdges[:-1].round(decimals=2),
+                xTickLabels=self._binEdges[:-1].round(decimals=2),
                 xLabel="normalized score",
             )
 
-        rawScoresByGroup = scoresByGroup(self.__data, list(self.__groups.keys()), self.__predScoreTruncated)
+        rawScoresByGroup = scoresByGroup(self._data, list(self._groups.keys()), self._predScoreTruncated)
         rawGroupScoresAsHist = self._dataToHistograms(rawScoresByGroup)
         s = rawGroupScoresAsHist.sum()
         rawGroupScoresAsHist /= s
         fairScoreTranslation = self._calculateFairReplacementStrategy(groupFinalBarycenters, rawGroupScoresAsHist)
-        return self._replaceRawByFairScores(self.__data, fairScoreTranslation, "fairScore")
+        return self._replaceRawByFairScores(self._data, fairScoreTranslation, "fairScore")

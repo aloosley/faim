@@ -9,6 +9,7 @@ from typing import Dict, Optional, List
 import numpy as np
 import pandas as pd
 import pooch
+from numpy._typing import NDArray
 
 from faim import evaluation
 from faim.algorithm.faim import FairInterpolationMethod
@@ -71,8 +72,16 @@ def download_synthetic_data(
         )
 
 
-def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_score, group_names, regForOT):
-    data = pd.read_csv(pathToData, sep=",")
+def interpolate_fairly(
+    score_stepsize: float,
+    thetas: Dict[int, NDArray[np.float64]],
+    result_dir: Path,
+    data_filepath: Path,
+    pred_score_column: str,
+    group_names: Dict[int, str],
+    optimal_transport_regularization: float,
+):
+    data = pd.read_csv(data_filepath, sep=",")
 
     # check that we have a theta for each group and for each fairness criterion
     actual = 0
@@ -91,32 +100,33 @@ def interpolate_fairly(score_stepsize, thetas, result_dir, pathToData, pred_scor
             raise ValueError("group thetas are all 0")
 
     t = process_time()
-    fia = FairInterpolationMethod(
-        data,
-        group_names,
-        pred_score,
-        score_stepsize,
-        thetas,
-        regForOT,
-        path=result_dir,
+    fair_interpolation_method = FairInterpolationMethod(
+        rawData=data,
+        group_names=group_names,
+        pred_score_column=pred_score_column,
+        score_stepsize=score_stepsize,
+        thetas=thetas,
+        regForOT=optimal_transport_regularization,
+        plot_dir=result_dir,
         plot=True,
     )
-    result = fia.run()
+    result = fair_interpolation_method.run()
     elapsed_time = process_time() - t
-    result.to_csv(os.path.join(result_dir, "resultData.csv"))
+    result.to_csv(result_dir / "resultData.csv")
 
-    print(
-        "running time: " + str(elapsed_time),
-        file=open(os.path.join(result_dir, "runtime.txt"), "a"),
-    )
+    with (result_dir / "runtime.txt").open("a") as f:
+        print(
+            "running time: " + str(elapsed_time),
+            file=f,
+        )
 
 
-def parseThetasToMatrix(thetaString):
+def parse_thetas_arg(thetas_arg: str) -> NDArray[np.float64]:
     """Convert argv string of thetas into 2D array of floats of thetas, one row per group."""
-    thetas1D = np.fromstring(thetaString, dtype=float, sep=",")
+    thetas_array = np.fromstring(thetas_arg, dtype=float, sep=",")
     # make sure three thetas exist for each group
-    assert len(thetas1D) % 3 == 0
-    return np.reshape(thetas1D, (-1, 3))
+    assert len(thetas_array) % 3 == 0
+    return np.reshape(thetas_array, (-1, 3))
 
 
 def main(argv: Optional[List[str]] = None):
@@ -132,9 +142,9 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument(
         "--run",
         nargs=4,
-        metavar=("DATASET NAME", "STEPSIZE", "THETAS", "DIRECTORY"),
+        metavar=("DATASET NAME", "STEPSIZE", "THETAS", "PATH_TO_DATASET"),
         help="runs continuous fairness algorithm for given DATASET NAME with \
-                              STEPSIZE and THETAS and stores results into DIRECTORY",
+                              STEPSIZE and THETAS and stores results under a relative results directory",
     )
     parser.add_argument(
         "--evaluate",
@@ -151,7 +161,7 @@ def main(argv: Optional[List[str]] = None):
             base_url="https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12"
         )
     elif args.prepare_data == ["synthetic-generated"]:
-        create_synthetic_data(100000, {0: "privileged", 1: "disadvantaged"})
+        create_synthetic_data(size=100000, group_names={0: "privileged", 1: "disadvantaged"})
     elif args.prepare_data == ["compas"]:
         compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
         compasPreps.prepare_gender_data()
@@ -160,58 +170,55 @@ def main(argv: Optional[List[str]] = None):
     elif args.prepare_data == ["zalando"]:
         raise ValueError("The Zalando dataset has not yet been released. Please contact the authors for more info.")
 
-        # ZalandoDataset(input_filepath=input_filepath, output_dir=OUTPUT_DIR / "zalando")
+        # ZalandoDataset(input_filepath=input_filepath, plot_dir=OUTPUT_DIR / "zalando")
     elif args.run:
         score_stepsize = float(args.run[1])
         # FIXME: thetas are given as np matrix in same order of group names that are defined below, because I did not find a way to pass them as
         # dict
-        thetasAsNpMatrix = parseThetasToMatrix(args.run[2])
+        thetas_array: NDArray[np.float64] = parse_thetas_arg(args.run[2])
 
-        # create result directory with matching subdir structure as in data folder, assuming relative path
-        relativePathToData = args.run[3]
-        # extract subdir structure
-        folderList = os.path.normpath(relativePathToData).split(os.path.sep)
-        # replace top-level dir and delete filename
-        folderList = folderList[1:-1]
-        folderList.insert(0, "results")
-        # add folder for thetas
-        folderList.append(args.run[2])
-        resultDir = os.path.join(*(folderList))
-        Path(resultDir).mkdir(parents=True, exist_ok=True)
+        # create result directory with matching subdir structure as in data folder, assuming relative plot_dir
+        data_filepath = Path(args.run[3])
+        if not data_filepath.exists():
+            raise FileNotFoundError(f"Data file not found: {data_filepath}")
 
+        results_dir = Path(f"results/{'/'.join(data_filepath.parts[-4:-1])}/{args.run[2]}")
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        group_names: Dict[int, str]
         if args.run[0] == "synthetic-from-paper":
-            regForOT = 0.001
-            groupNames = {0: "privileged", 1: "disadvantaged"}
+            optimal_transport_regularization = 0.001
+            group_names = {0: "advantaged", 1: "disadvantaged"}
         elif args.run[0] == "compasGender":
-            regForOT = 0.005
-            groupNames = {0: "male", 1: "female"}
+            optimal_transport_regularization = 0.005
+            group_names = {0: "male", 1: "female"}
         elif args.run[0] == "compasRace":
-            regForOT = 0.05
-            groupNames = {0: "Caucasian", 1: "Afr.-Amer.", 2: "Hispanic", 3: "Other"}
+            optimal_transport_regularization = 0.05
+            group_names = {0: "Caucasian", 1: "Afr.-Amer.", 2: "Hispanic", 3: "Other"}
         elif args.run[0] == "compasAge":
-            regForOT = 0.005
-            groupNames = {0: "old", 1: "mid-age", 2: "young"}
+            optimal_transport_regularization = 0.005
+            group_names = {0: "old", 1: "mid-age", 2: "young"}
         elif args.run[0] == "zalando":
-            regForOT = 0.001
-            groupNames = {0: "low", 1: "high"}
+            optimal_transport_regularization = 0.001
+            group_names = {0: "low", 1: "high"}
         else:
             parser.error(
                 "unknown dataset. Options are 'synthetic-from-paper', \
                 'compasRace', 'compasAge', 'compasGender', and \
                 'zalando'."
             )
+            assert False
 
-        thetas = dict(
-            (groupName, thetasAsNpMatrix[i]) for groupName in groupNames.keys() for i in range(len(groupNames.keys()))
-        )
+        thetas = {group_id: thetas_array[idx] for idx, group_id in enumerate(group_names.keys())}
+
         interpolate_fairly(
             score_stepsize=score_stepsize,
             thetas=thetas,
-            result_dir=resultDir,
-            pathToData=relativePathToData,
-            pred_score="pred_score",
-            group_names=groupNames,
-            regForOT=regForOT,
+            result_dir=results_dir,
+            data_filepath=data_filepath,
+            pred_score_column="pred_score",
+            group_names=group_names,
+            optimal_transport_regularization=optimal_transport_regularization,
         )
     elif args.evaluate:
         if args.evaluate[0] == "synthetic-from-paper":

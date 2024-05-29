@@ -14,7 +14,7 @@ is a post-processing algorithm for achieving a combination of group-fairness cri
 ## Installation
 
 ### Environment
-Ensure you have a environment with Python>=3.7 and pip>=2.21, preferably by creating a virtual environment.
+Ensure you have a environment with Python>=3.8 and pip>=2.21, preferably by creating a virtual environment.
 
 One way to do this is using [miniconda](https://docs.conda.io/en/latest/miniconda.html).  Install miniconda following
 the instructions on [this page](https://docs.conda.io/en/latest/miniconda.html)
@@ -29,7 +29,7 @@ Activate the environment
 conda activate faim
 ```
 
-Check that versions of python are >=3.7 and >=2.21, respectively:
+Check that versions of python are >=3.8 and >=2.21, respectively:
 ```bash
 python --version
 pip --version

@@ -69,18 +69,18 @@ def performancePerBinAndGroup():
 
 
 def plott(data, filename, colormap):
-    mpl.rcParams.update(
-        {
-            "font.size": 30,
-            "lines.linewidth": 3,
-            "lines.markersize": 15,
-            "font.family": "Times New Roman",
-        }
-    )
-    # avoid type 3 (i.e. bitmap) fonts in figures
-    mpl.rcParams["ps.useafm"] = True
-    mpl.rcParams["pdf.use14corefonts"] = True
-    mpl.rcParams["text.usetex"] = True
+    # mpl.rcParams.update(
+    #     {
+    #         "font.size": 30,
+    #         "lines.linewidth": 3,
+    #         "lines.markersize": 15,
+    #         "font.family": "Times New Roman",
+    #     }
+    # )
+    # # avoid type 3 (i.e. bitmap) fonts in figures
+    # mpl.rcParams["ps.useafm"] = True
+    # mpl.rcParams["pdf.use14corefonts"] = True
+    # mpl.rcParams["text.usetex"] = True
 
     fig = plt.figure(figsize=(16, 8))
     ax = fig.add_subplot(111)
