@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+from numpy.random import PCG64, Generator
 
 from faim.main import main
 
@@ -15,22 +16,27 @@ def test_main_prepare_synthetic_data() -> None:
         temp_dir = Path(temp_dir)
 
         with patch("faim.main.OUTPUT_DIR", temp_dir):
-            expected_prepared_data_directory = Path(
-                f"{temp_dir}/synthetic/2groups/{datetime.today().strftime('%Y-%m-%d')}"
-            )
+            with patch("numpy.random.default_rng", lambda: Generator(PCG64(43))):
+                expected_prepared_data_directory = Path(
+                    f"{temp_dir}/synthetic/2groups/{datetime.today().strftime('%Y-%m-%d')}"
+                )
 
-            # WHEN prepare-data invoked via CLI
-            main(["--prepare-data", "synthetic-generated"])
+                # WHEN prepare-data invoked via CLI
+                main(["--prepare-data", "synthetic-generated"])
 
-            # THEN data is as expected
-            dict(pd.read_csv(expected_prepared_data_directory / "dataset.csv").iloc[0]) == {
-                "groundTruthLabel": 1,
-                "group": 0,
-                "pred_score": 6.77016283601609,
-                "predictedLabel": 1,
-                "true_score": 5.491779193811632,
-                "uuid": "268234863050756571371918738194881370874",
-            }
+                # THEN data is as expected
+
+                assert dict(
+                    pd.read_csv(expected_prepared_data_directory / "dataset.csv").iloc[0][
+                        ["group", "true_score", "pred_score", "groundTruthLabel", "predictedLabel"]
+                    ]
+                ) == {
+                    "groundTruthLabel": 1,
+                    "group": 0,
+                    "pred_score": 6.2083188285012865,
+                    "predictedLabel": 1,
+                    "true_score": 5.590451070880375,
+                }
 
 
 @pytest.mark.optional

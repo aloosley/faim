@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import pooch
 from numpy._typing import NDArray
+from numpy.random import Generator
 
 from faim import evaluation
 from faim.algorithm.faim import FairInterpolationMethod
@@ -23,8 +24,11 @@ DATA_TOP_DIR = Path(__file__).parent.parent / "data"
 OUTPUT_DIR = Path(".") / "prepared-data"
 
 
-def create_synthetic_data(size: int, group_names: Dict[int, str]) -> None:
-    creator = SyntheticDatasetCreator(size, len(group_names))
+def create_synthetic_data(size: int, group_names: Dict[int, str], random_generator: Optional[Generator] = None) -> None:
+    if random_generator is None:
+        random_generator = np.random.default_rng()
+
+    creator = SyntheticDatasetCreator(size, len(group_names), random_generator=random_generator)
     creator.createTwoCorrelatedNormalDistributionScores()
     creator.sortByColumn("pred_score")
     creator.setDecisionBoundaryAsMean("true_score", "pred_score")

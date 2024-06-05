@@ -122,13 +122,11 @@ class SyntheticDatasetCreator(object):
     def boundary(self):
         return self.__boundary
 
-    def __init__(self, size: int, group_count: int) -> None:
+    def __init__(self, size: int, group_count: int, random_generator: Optional[Generator] = None) -> None:
         """
         @param size:                            total number of data points to be created
         @param group_count:                     total number of groups
         """
-
-        seed(43)
 
         self.__dataset = pd.DataFrame()
 
@@ -137,6 +135,10 @@ class SyntheticDatasetCreator(object):
 
         # generate ID column with 128-bit integer IDs
         self.__dataset["uuid"] = [uuid.uuid4().int for _ in range(len(self.__dataset.index))]
+
+        if random_generator is None:
+            random_generator = np.random.default_rng()
+        self.random_generator = random_generator
 
     def sortByColumn(self, colName):
         dataset = self.__dataset
@@ -171,11 +173,11 @@ class SyntheticDatasetCreator(object):
             if group:
                 mu1 = -1
                 mu2 = -3
-                y = np.random.multivariate_normal([mu1, mu2], covMatr, size=len(x))
+                y = self.random_generator.multivariate_normal([mu1, mu2], covMatr, size=len(x))
             else:
                 mu1 = 1
                 mu2 = 2
-                y = np.random.multivariate_normal([mu1, mu2], covMatr, size=len(x))
+                y = self.random_generator.multivariate_normal([mu1, mu2], covMatr, size=len(x))
 
             x["true_score"] = y[:, 0]
             x["pred_score"] = y[:, 1]
