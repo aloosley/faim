@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import pandas as pd
 import pytest
 
 from faim.main import main
@@ -21,8 +22,15 @@ def test_main_prepare_synthetic_data() -> None:
             # WHEN prepare-data invoked via CLI
             main(["--prepare-data", "synthetic-generated"])
 
-            # THEN prepared dataset exists
-            assert (expected_prepared_data_directory / "dataset.csv").exists()
+            # THEN data is as expected
+            dict(pd.read_csv(expected_prepared_data_directory / "dataset.csv").iloc[0]) == {
+                "groundTruthLabel": 1,
+                "group": 0,
+                "pred_score": 6.77016283601609,
+                "predictedLabel": 1,
+                "true_score": 5.491779193811632,
+                "uuid": "268234863050756571371918738194881370874",
+            }
 
 
 @pytest.mark.optional
