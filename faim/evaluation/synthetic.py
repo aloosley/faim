@@ -87,22 +87,17 @@ def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
 
     # collect model performances
     report = skmetr.classification_report(data["groundTruthLabel"], data[scoreAttr], output_dict=True)
-    modelPerformances = modelPerformances.append(
-        pd.Series(
-            {
-                "Precision": round(report.get("weighted avg").get("precision"), DECIMAL_PLACES),
-                "Recall": round(report.get("weighted avg").get("recall"), DECIMAL_PLACES),
-                "Accuracy": round(report.get("accuracy"), DECIMAL_PLACES),
-            },
-            name="all",
-        )
-    )
+    modelPerformances.loc["all"] = {
+        "Precision": round(report.get("weighted avg").get("precision"), DECIMAL_PLACES),
+        "Recall": round(report.get("weighted avg").get("recall"), DECIMAL_PLACES),
+        "Accuracy": round(report.get("accuracy"), DECIMAL_PLACES),
+    }
 
     # calc error rates
     confusionMatrixAll = pd.crosstab(data["groundTruthLabel"], data[scoreAttr], margins=True)
     falsePositiveRate = round(confusionMatrixAll.loc[0, 1] / confusionMatrixAll.loc[0, "All"], DECIMAL_PLACES)
     falseNegativeRate = round(confusionMatrixAll.loc[1, 0] / confusionMatrixAll.loc[1, "All"], DECIMAL_PLACES)
-    allErrorRates = allErrorRates.append(pd.Series({"FPR": falsePositiveRate, "FNR": falseNegativeRate}, name="all"))
+    allErrorRates.loc["all"] = {"FPR": falsePositiveRate, "FNR": falseNegativeRate}
 
     # print stuff
     resultString = "\nERROR RATES ALL INDIVIDUALS \n====================================\n"
@@ -113,16 +108,11 @@ def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
         groupData = data[data["group"] == group]
         # collect model performances
         report = skmetr.classification_report(groupData["groundTruthLabel"], groupData[scoreAttr], output_dict=True)
-        modelPerformances = modelPerformances.append(
-            pd.Series(
-                {
-                    "Precision": round(report.get("weighted avg").get("precision"), DECIMAL_PLACES),
-                    "Recall": round(report.get("weighted avg").get("recall"), DECIMAL_PLACES),
-                    "Accuracy": round(report.get("accuracy"), DECIMAL_PLACES),
-                },
-                name=group,
-            )
-        )
+        modelPerformances.loc[group] = {
+            "Precision": round(report.get("weighted avg").get("precision"), DECIMAL_PLACES),
+            "Recall": round(report.get("weighted avg").get("recall"), DECIMAL_PLACES),
+            "Accuracy": round(report.get("accuracy"), DECIMAL_PLACES),
+        }
 
         # calc error rates
         confusionMatrixGroup = pd.crosstab(groupData["groundTruthLabel"], groupData[scoreAttr], margins=True)
@@ -132,9 +122,7 @@ def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
         falseNegativeRateGroup = round(
             confusionMatrixGroup.loc[1, 0] / confusionMatrixGroup.loc[1, "All"], DECIMAL_PLACES
         )
-        allErrorRates = allErrorRates.append(
-            pd.Series({"FPR": falsePositiveRateGroup, "FNR": falseNegativeRateGroup}, name=group)
-        )
+        allErrorRates.loc[group] = {"FPR": falsePositiveRateGroup, "FNR": falseNegativeRateGroup}
 
         # print
         resultString += "ERROR RATES GROUP " + str(group) + " INDIVIDUALS \n====================================\n"
@@ -159,7 +147,7 @@ def evaluateWithGLM(scoreAttr, data):
     control = np.exp(intercept) / (1 + np.exp(intercept))
 
     for groupCat in data["group"].unique():
-        row = resultFrame.filter(regex="group..\." + str(groupCat) + ".", axis=0)
+        row = resultFrame.filter(regex=r"group..\." + str(groupCat) + ".", axis=0)
         if row.empty:
             continue
         oddsFactor = np.exp(row["coef"]) / (1 - control + (control * np.exp(row["coef"])))
@@ -189,7 +177,7 @@ def evaluateWithGLM_trueLabel(data):
     control = np.exp(intercept) / (1 + np.exp(intercept))
 
     for groupCat in data["group"].unique():
-        row = resultFrame.filter(regex="group..\." + str(groupCat) + ".", axis=0)
+        row = resultFrame.filter(regex=r"group..\." + str(groupCat) + ".", axis=0)
         if row.empty:
             continue
         oddsFactor = np.exp(row["coef"]) / (1 - control + (control * np.exp(row["coef"])))
