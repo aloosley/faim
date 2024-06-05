@@ -1,5 +1,6 @@
 import uuid
 from pathlib import Path
+from random import seed
 from typing import Optional, List
 
 import numpy as np
@@ -9,6 +10,8 @@ from numpy.random import Generator
 
 
 class SyntheticGroupedDatasetBuilder:
+    """Clean dataset builder that should eventually replace the "Creator" below."""
+
     def __init__(
         self, group_names: List[str], n_by_group: List[int], random_generator: Optional[Generator] = None
     ) -> None:
@@ -125,6 +128,8 @@ class SyntheticDatasetCreator(object):
         @param group_count:                     total number of groups
         """
 
+        seed(43)
+
         self.__dataset = pd.DataFrame()
 
         # assign groups to items
@@ -134,7 +139,9 @@ class SyntheticDatasetCreator(object):
         self.__dataset["uuid"] = [uuid.uuid4().int for _ in range(len(self.__dataset.index))]
 
     def sortByColumn(self, colName):
-        self.__dataset = self.__dataset.rename_axis(["idx"]).sort_values(by=[colName, "idx"], ascending=[False, True])
+        dataset = self.__dataset
+        dataset["idx"] = dataset.index
+        self.__dataset = dataset.sort_values(by=[colName, "idx"], ascending=[False, True])
 
     def setDecisionBoundaryAsMean(self, trueScoreCol, predScoreCol):
         boundary = self.__dataset[trueScoreCol].mean()
@@ -174,7 +181,7 @@ class SyntheticDatasetCreator(object):
             x["pred_score"] = y[:, 1]
             return x
 
-        self.__dataset = self.__dataset.groupby("group", as_index=False, sort=False).apply(score)
+        self.__dataset = self.__dataset.groupby(["group"], as_index=False, sort=False, group_keys=False).apply(score)
 
     def writeToCSV(self, output_filepath: Path) -> None:
         self.__dataset.to_csv(output_filepath, index=False, header=True)
