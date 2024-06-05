@@ -263,7 +263,7 @@ class FairInterpolationMethod:
                 rawData.loc[replaceAtIndex, newScores_colName] = fairScore
             return rawData
 
-        raw = raw.groupby(["group"], as_index=False, sort=False).apply(replace)
+        raw = raw.groupby(["group"], as_index=False, sort=False, group_keys=False).apply(replace)
 
         fairEdges = sorted(raw[newScores_colName].unique())
         roundedFairEdges = [round(elem, 2) for elem in fairEdges]
