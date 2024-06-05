@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import pytest
 from numpy.random import PCG64, Generator
@@ -30,19 +31,16 @@ def test_main_prepare_synthetic_data() -> None:
                         ["group", "true_score", "pred_score", "groundTruthLabel", "predictedLabel"]
                     ]
                 )
-                assert prepared_data_first_row == {
-                    "groundTruthLabel": 1,
-                    "group": 0,
-                    "pred_score": 6.2083188285012865,
-                    "predictedLabel": 1,
-                    "true_score": 5.590451070880375,
-                } or prepared_data_first_row == {
-                    "groundTruthLabel": 1,
-                    "group": 0,
-                    "pred_score": 6.129299256752774,
-                    "predictedLabel": 1,
-                    "true_score": 4.555193294284843,
-                }  # ToDo pin down other source of randomness
+                assert prepared_data_first_row["groundTruthLabel"] == 1
+                assert prepared_data_first_row["predictedLabel"] == 1
+                assert prepared_data_first_row["group"] == 0
+                # ToDo pin down other source of randomness
+                assert np.allclose(prepared_data_first_row["pred_score"], 6.2083188285012865) or np.allclose(
+                    prepared_data_first_row["pred_score"], 6.129299256752774
+                )
+                assert np.allclose(prepared_data_first_row["true_score"], 5.590451070880375) or np.allclose(
+                    prepared_data_first_row["true_score"], 4.555193294284843
+                )
 
 
 @pytest.mark.optional

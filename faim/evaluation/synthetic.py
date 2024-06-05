@@ -8,7 +8,7 @@ import os
 DECIMAL_PLACES = 3
 
 
-def evaluate(data, pathToResult):
+def evaluate(data: pd.DataFrame, pathToResult: str) -> None:
     # calculate model from true scores (decision boundary was set as mean of true scores) for fair label calc
     x = data["true_score"]
     data["true_score"] = (x - min(x)) / (max(x) - min(x))
