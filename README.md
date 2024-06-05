@@ -69,10 +69,8 @@ brew install --cask mactex
 Don't forget to restart your terminal before using the `faim` CLI.
 
 ## Usage
-Installing faim also (currently) installs one command line interface (CLI) tool, `faim-experiment` which can be
-used to reproduce the work in the paper.
-
-[A general API will be added soon]
+See [notebooks/faim-scores-example.ipynb](notebooks/faim-scores-example.ipynb) for an example of
+calculating faim scores.
 
 ### Experiments
 This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).

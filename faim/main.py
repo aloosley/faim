@@ -105,12 +105,12 @@ def interpolate_fairly(
 
     t = process_time()
     fair_interpolation_method = FairInterpolationMethod(
-        rawData=data,
+        raw_data=data,
         group_names=group_names,
         pred_score_column=pred_score_column,
         score_stepsize=score_stepsize,
         thetas=thetas,
-        regForOT=optimal_transport_regularization,
+        optimal_transport_regularization=optimal_transport_regularization,
         plot_dir=result_dir,
         plot=True,
     )
