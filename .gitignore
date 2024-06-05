@@ -17,6 +17,7 @@ settings.json
 # Data
 *prepared-data*
 */prepared-data
+!/prepared-data/synthetic/2groups/2022-01-12/dataset.csv
 
 # Results
 results/
