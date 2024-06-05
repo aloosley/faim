@@ -256,7 +256,7 @@ class FairInterpolationMethod:
             rawScores = rawData[self._predScoreTruncated]
             groupName = rawData["group"].iloc[0]
             fairScores = fairScoreTranslationPerGroup[groupName]
-            for index, fairScore in fairScores.iteritems():
+            for index, fairScore in fairScores.items():
                 range_left = self._binEdges[index]
                 range_right = self._binEdges[index + 1]
                 replaceAtIndex = (rawScores >= range_left) & (rawScores < range_right)
