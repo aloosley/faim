@@ -174,7 +174,7 @@ class SyntheticDatasetCreator(object):
             x["pred_score"] = y[:, 1]
             return x
 
-        self.__dataset = self.__dataset.groupby(self.__dataset["group"], as_index=False, sort=False).apply(score)
+        self.__dataset = self.__dataset.groupby("group", as_index=False, sort=False).apply(score)
 
     def writeToCSV(self, output_filepath: Path) -> None:
         self.__dataset.to_csv(output_filepath, index=False, header=True)
