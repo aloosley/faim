@@ -1,3 +1,5 @@
+# ToDo: (WIP) Create an API that conforms to ML community standards
+
 from typing import List, Iterable
 
 import numpy as np
