@@ -40,8 +40,6 @@ def normalizeRowsToOne(mat):
     # first calculate sum of the entire integral per row
     norm_vec = np.matmul(mat, np.ones(mat.shape[0]))
     # we have to divide each row entry by this integral, hence creating inverse of norm_vec
-    inverse_norm_vec = np.reciprocal(norm_vec)
-    # replace nans with zero (in case a row was all 0 in the first place)
-    inverse_norm_vec = np.nan_to_num(inverse_norm_vec, copy=False)
+    inverse_norm_vec = np.reciprocal(norm_vec, where=norm_vec != 0)
     norm_matrix = np.diag(inverse_norm_vec)
     return np.matmul(norm_matrix, mat)
