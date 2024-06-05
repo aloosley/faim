@@ -134,7 +134,7 @@ class SyntheticDatasetCreator(object):
         self.__dataset["uuid"] = [uuid.uuid4().int for _ in range(len(self.__dataset.index))]
 
     def sortByColumn(self, colName):
-        self.__dataset = self.__dataset.rename_axis("idx").sort_values(by=[colName, "idx"], ascending=[False, True])
+        self.__dataset = self.__dataset.rename_axis(["idx"]).sort_values(by=[colName, "idx"], ascending=[False, True])
 
     def setDecisionBoundaryAsMean(self, trueScoreCol, predScoreCol):
         boundary = self.__dataset[trueScoreCol].mean()
