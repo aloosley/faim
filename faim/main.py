@@ -165,7 +165,7 @@ def main(argv: Optional[List[str]] = None):
             base_url="https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12"
         )
     elif args.prepare_data == ["synthetic-generated"]:
-        create_synthetic_data(size=100000, group_names={0: "privileged", 1: "disadvantaged"})
+        create_synthetic_data(size=100000, group_names={0: "advantaged", 1: "disadvantaged"})
     elif args.prepare_data == ["compas"]:
         compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
         compasPreps.prepare_gender_data()
