@@ -10,7 +10,7 @@ class TestNormalSyntheticGroupedDatasetBuilder:
         n_by_group = [10000, 10000]
         random_generator = Generator(PCG64(4))
         synth_data_builder = NormalSyntheticGroupedDatasetBuilder(
-            group_names=["privileged", "disadvantaged"],
+            group_names=["advantaged", "disadvantaged"],
             n_by_group=n_by_group,
             truth_prediction_means_by_group=[np.array([-1, -3]), np.array([1, 2])],
             truth_prediction_correlation_matrixs_by_group=[

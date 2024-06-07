@@ -170,7 +170,7 @@ def evaluateWithGLM(scoreAttr, data):
     control = np.exp(intercept) / (1 + np.exp(intercept))
 
     for groupCat in data["group"].unique():
-        row = resultFrame.filter(regex="group..\." + str(groupCat) + ".", axis=0)
+        row = resultFrame.filter(regex=r"group..\." + str(groupCat) + ".", axis=0)
         if row.empty:
             continue
         oddsFactor = np.exp(row["coef"]) / (1 - control + (control * np.exp(row["coef"])))

@@ -35,21 +35,21 @@ class FairInterpolationMethod:
 
     def __init__(
         self,
-        rawData: pd.DataFrame,
+        raw_data: pd.DataFrame,
         group_names: Dict[int, str],
         pred_score_column: str,
         score_stepsize: float,
         thetas: Dict[int, NDArray[np.float64]],
-        regForOT: float,
+        optimal_transport_regularization: float = 0.001,
         plot_dir: Path = Path("."),
         plot: bool = False,
     ):
         """
         Arguments:
-            rawData {dataframe} -- contains data points as rows and features as columns
+            raw_data {dataframe} -- contains data points as rows and features as columns
             group_names {dict} -- translates from group indicators to group names as strings
             pred_score_column {string} -- name of column that contains the prediction scores
-            score_stepsize {float} -- stepsize between two scores
+            score_stepsize {float} -- stepsize between two scores - used when calculating score distributions for optimal transport
             thetas {dict} -- keys: group names as int
                              values: vectors of 3 parameters per group,
                              each determining how far a distribution is to be moved towards
@@ -63,7 +63,7 @@ class FairInterpolationMethod:
             plot {bool} -- tells if plots shall be generated (default: {False})
         """
 
-        self._data = rawData
+        self._data = raw_data
         self._predScoreTruncated = pred_score_column + "_truncated"
 
         # have some convenience for plots
@@ -76,8 +76,8 @@ class FairInterpolationMethod:
 
         # calculate bin edges to truncate scores, for histograms and loss matrix size
         self._binEdges = np.arange(
-            rawData[pred_score_column].min() - score_stepsize,
-            rawData[pred_score_column].max() + score_stepsize,
+            raw_data[pred_score_column].min() - score_stepsize,
+            raw_data[pred_score_column].max() + score_stepsize,
             score_stepsize,
         )
         self._numBins = int(len(self._binEdges) - 1)
@@ -108,7 +108,7 @@ class FairInterpolationMethod:
         self._lossMatrix /= self._lossMatrix.max()
 
         self._thetas = thetas
-        self._regForOT = regForOT
+        self._regForOT = optimal_transport_regularization
 
     def _plott(
         self, dataframe, filename, xLabel="", yLabel="", xTickLabels=None, yMin=None, yMax=None, isTransportMap=False
@@ -263,7 +263,7 @@ class FairInterpolationMethod:
                 rawData.loc[replaceAtIndex, newScores_colName] = fairScore
             return rawData
 
-        raw = raw.groupby(["group"], as_index=False, sort=False).apply(replace)
+        raw = raw.groupby(["group"], as_index=False, sort=False, group_keys=False).apply(replace)
 
         fairEdges = sorted(raw[newScores_colName].unique())
         roundedFairEdges = [round(elem, 2) for elem in fairEdges]
@@ -398,17 +398,17 @@ class FairInterpolationMethod:
             self._lossMatrix,
             self._regForOT,
             weights=groupSizesPercent.values,
-            verbose=True,
+            verbose=False,
             log=True,
         )[0]
-        print(
-            "Sum of barycenter between groups for condition "
-            + conditionCol
-            + "="
-            + str(conditionVal)
-            + ": "
-            + str(sigmaBar.sum())
-        )
+        # print(
+        #     "Sum of barycenter between groups for condition "
+        #     + conditionCol
+        #     + "="
+        #     + str(conditionVal)
+        #     + ": "
+        #     + str(sigmaBar.sum())
+        # )
         if self._plot:
             self._plott(pd.DataFrame(sigmaBar), plotFilename, xLabel="normalized score")
 
@@ -462,11 +462,12 @@ class FairInterpolationMethod:
             barycenters["muB"] = muB_perGroup[group]
             barycenters["muC"] = muC_perGroup[group]
 
-            self._plott(
-                pd.DataFrame(barycenters),
-                "muAmuBmuC_group=" + str(group) + ".png",
-                xLabel="mu score",
-            )
+            if self._plot:
+                self._plott(
+                    pd.DataFrame(barycenters),
+                    "muAmuBmuC_group=" + str(group) + ".png",
+                    xLabel="mu score",
+                )
 
             # all 3 distributions must sum up to the same value
             if barycenters["muA"].sum() != 1:
@@ -478,17 +479,18 @@ class FairInterpolationMethod:
             if barycenters["muC"].sum() != 1:
                 s = barycenters["muC"].sum()
                 barycenters["muC"] /= s
-            self._plott(
-                pd.DataFrame(barycenters),
-                "muAmuBmuC_normalized_group=" + str(group) + ".png",
-                xLabel="mu score",
-            )
+            if self._plot:
+                self._plott(
+                    pd.DataFrame(barycenters),
+                    "muAmuBmuC_normalized_group=" + str(group) + ".png",
+                    xLabel="mu score",
+                )
             groupFinalBarycenters[group] = ot.bregman.barycenter(
                 barycenters.to_numpy(),
                 self._lossMatrix,
                 self._regForOT,
                 weights=groupThetas,
-                verbose=True,
+                verbose=False,
                 log=True,
             )[0]
             if self._plot:

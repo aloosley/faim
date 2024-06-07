@@ -69,12 +69,14 @@ brew install --cask mactex
 Don't forget to restart your terminal before using the `faim` CLI.
 
 ## Usage
-Installing faim also (currently) installs one command line interface (CLI) tool, `faim-experiment` which can be
-used to reproduce the work in the paper.
+### Calculate Your Own FAIM Scores
+See [notebooks/faim-scores-example.ipynb](notebooks/faim-scores-example.ipynb) for an example of
+calculating faim scores.
 
-[A general API will be added soon]
+We would love to see this algorithm integrated into [fairlearn](https://fairlearn.org/), and would
+also consider integrating it ourselves if there is community demand for FAIM.
 
-### Experiments
+### Recreate Experimental Results from Paper
 This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).
 
 Ensure the package has been installed with `[experiment]` extra requirements before continuing
@@ -160,21 +162,25 @@ These results include:
 * plot of the fair score distribution per group (fairScoreDistributionPerGroup.png)
 * plots of the transport maps per group (fairScoreReplacementStrategy.png)
 
-In addition to the plots, we provide performance and fairness evaluation code for all datasets. It automatically finds all resultData.csv-files for any experimental setup (e.g., different values of the theta-vector, or different datasets such as compasAge or compasGender) and writes a file eval.txt into the same folder of the respective resultData.csv.
-
-To run the evaluation, type
+For any folder with results, the following command can be used to evaluate performance and error rates before and after
+the application of FAIM:
 ```bash
-faim-experiment --evaluate DATASETS
+faim-experiment --evaluate DATASET
 ```
-`DATASETS` is now one of the following options:
+where `DATASET` is one of the following options:
 * `synthetic-from-paper` (recursively searches for all resultData.csv under results/synthetic)
 * `compas` (recursively searches for all resultData.csv under results/compas)
 * `zalando` (recursively searches for all resultData.csv under results/zalando)
 
-eval.txt calculates the following metrics:
+For example, if you run `faim-experiment --evaluate synthetic-from-paper`,
+then for any (relative) experiment folder under `results/synthetic/` that contains the file `resultsData.csv`,
+an `eval.txt` file will be created containing following metrics:
 * The probability of the protected groups to be labeled positive w.r.t. the non-protected group, for the three cases ground truth, original prediction, and fair score prediction.
-* Accuracy, Precision, and Recall for the original and the fair model, plus the difference between them
+* Accuracy, Precision, and Recall (by class and macro/weighted averages) for the original and the fair model, plus the difference between them
 * False positive and false negative rates for the original and the fair model, plus the differcence between them
+* Confusion matrices for each group and all groups
+
+Should you wish to calculate other metrics beyond what are shown in the paper, `eval.txt` should provide everything needed to do so.
 
 ### Development Environment
 To develop and/or contribute, clone the repository

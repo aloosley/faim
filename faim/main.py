@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import pooch
 from numpy._typing import NDArray
+from numpy.random import Generator
 
 from faim import evaluation
 from faim.algorithm.faim import FairInterpolationMethod
@@ -23,8 +24,11 @@ DATA_TOP_DIR = Path(__file__).parent.parent / "data"
 OUTPUT_DIR = Path(".") / "prepared-data"
 
 
-def create_synthetic_data(size: int, group_names: Dict[int, str]) -> None:
-    creator = SyntheticDatasetCreator(size, len(group_names))
+def create_synthetic_data(size: int, group_names: Dict[int, str], random_generator: Optional[Generator] = None) -> None:
+    if random_generator is None:
+        random_generator = np.random.default_rng()
+
+    creator = SyntheticDatasetCreator(size, len(group_names), random_generator=random_generator)
     creator.createTwoCorrelatedNormalDistributionScores()
     creator.sortByColumn("pred_score")
     creator.setDecisionBoundaryAsMean("true_score", "pred_score")
@@ -101,12 +105,12 @@ def interpolate_fairly(
 
     t = process_time()
     fair_interpolation_method = FairInterpolationMethod(
-        rawData=data,
+        raw_data=data,
         group_names=group_names,
         pred_score_column=pred_score_column,
         score_stepsize=score_stepsize,
         thetas=thetas,
-        regForOT=optimal_transport_regularization,
+        optimal_transport_regularization=optimal_transport_regularization,
         plot_dir=result_dir,
         plot=True,
     )
@@ -161,7 +165,7 @@ def main(argv: Optional[List[str]] = None):
             base_url="https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12"
         )
     elif args.prepare_data == ["synthetic-generated"]:
-        create_synthetic_data(size=100000, group_names={0: "privileged", 1: "disadvantaged"})
+        create_synthetic_data(size=100000, group_names={0: "advantaged", 1: "disadvantaged"})
     elif args.prepare_data == ["compas"]:
         compasPreps = CompasCreator(output_dir=OUTPUT_DIR / "compas")
         compasPreps.prepare_gender_data()

@@ -1,5 +1,6 @@
 import uuid
 from pathlib import Path
+from random import seed
 from typing import Optional, List
 
 import numpy as np
@@ -9,6 +10,8 @@ from numpy.random import Generator
 
 
 class SyntheticGroupedDatasetBuilder:
+    """Clean dataset builder that should eventually replace the "Creator" below."""
+
     def __init__(
         self, group_names: List[str], n_by_group: List[int], random_generator: Optional[Generator] = None
     ) -> None:
@@ -119,7 +122,7 @@ class SyntheticDatasetCreator(object):
     def boundary(self):
         return self.__boundary
 
-    def __init__(self, size: int, group_count: int) -> None:
+    def __init__(self, size: int, group_count: int, random_generator: Optional[Generator] = None) -> None:
         """
         @param size:                            total number of data points to be created
         @param group_count:                     total number of groups
@@ -133,8 +136,14 @@ class SyntheticDatasetCreator(object):
         # generate ID column with 128-bit integer IDs
         self.__dataset["uuid"] = [uuid.uuid4().int for _ in range(len(self.__dataset.index))]
 
+        if random_generator is None:
+            random_generator = np.random.default_rng()
+        self.random_generator = random_generator
+
     def sortByColumn(self, colName):
-        self.__dataset = self.__dataset.rename_axis("idx").sort_values(by=[colName, "idx"], ascending=[False, True])
+        dataset = self.__dataset
+        dataset["idx"] = dataset.index
+        self.__dataset = dataset.sort_values(by=[colName, "idx"], ascending=[False, True])
 
     def setDecisionBoundaryAsMean(self, trueScoreCol, predScoreCol):
         boundary = self.__dataset[trueScoreCol].mean()
@@ -164,17 +173,17 @@ class SyntheticDatasetCreator(object):
             if group:
                 mu1 = -1
                 mu2 = -3
-                y = np.random.multivariate_normal([mu1, mu2], covMatr, size=len(x))
+                y = self.random_generator.multivariate_normal([mu1, mu2], covMatr, size=len(x))
             else:
                 mu1 = 1
                 mu2 = 2
-                y = np.random.multivariate_normal([mu1, mu2], covMatr, size=len(x))
+                y = self.random_generator.multivariate_normal([mu1, mu2], covMatr, size=len(x))
 
             x["true_score"] = y[:, 0]
             x["pred_score"] = y[:, 1]
             return x
 
-        self.__dataset = self.__dataset.groupby(self.__dataset["group"], as_index=False, sort=False).apply(score)
+        self.__dataset = self.__dataset.groupby(["group"], as_index=False, sort=False, group_keys=False).apply(score)
 
     def writeToCSV(self, output_filepath: Path) -> None:
         self.__dataset.to_csv(output_filepath, index=False, header=True)
