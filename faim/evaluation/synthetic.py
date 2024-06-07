@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import sklearn.metrics as skmetr
 import statsmodels.formula.api as smf
 import statsmodels.api as sm
@@ -81,7 +83,7 @@ def evaluate(data: pd.DataFrame, pathToResult: str) -> None:
     evalFile.close()
 
 
-def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
+def evaluateModelPerformanceAndErrorRates(data: pd.DataFrame, scoreAttr: str) -> Tuple[str, pd.DataFrame, pd.DataFrame]:
     modelPerformances = pd.DataFrame(columns=["Accuracy", "Precision", "Recall"])
     allErrorRates = pd.DataFrame(columns=["FPR", "FNR"])
 
@@ -132,7 +134,7 @@ def evaluateModelPerformanceAndErrorRates(data, scoreAttr):
     return resultString, modelPerformances, allErrorRates
 
 
-def evaluateWithGLM(scoreAttr, data):
+def evaluateWithGLM(scoreAttr: str, data: pd.DataFrame) -> str:
     decPlaces = 6
 
     # train logistic regression model
@@ -162,7 +164,7 @@ def evaluateWithGLM(scoreAttr, data):
     return resultString
 
 
-def evaluateWithGLM_trueLabel(data):
+def evaluateWithGLM_trueLabel(data: pd.DataFrame) -> str:
     decPlaces = 6
 
     # train logistic regression model
