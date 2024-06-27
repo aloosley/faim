@@ -1,6 +1,6 @@
 # ToDo: (WIP) Create an API that conforms to ML community standards
 
-from typing import List, Iterable, Protocol, Any
+from typing import Iterable, Protocol, Any
 from warnings import warn
 
 import numpy as np
