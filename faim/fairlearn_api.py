@@ -127,8 +127,8 @@ class FAIM:
     def _discretize_scores(self, scores: NDArray[np.float64]) -> NDArray[np.float64]:
         return self.normalized_discrete_score_values[np.digitize(scores, self.normalized_discrete_score_values) - 1]
 
-    @staticmethod
     def _compute_mu_a(
+        self,
         discrete_y_scores: NDArray[np.float64],
         y_groundtruth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
@@ -137,14 +137,16 @@ class FAIM:
         # Get calibrated scores (known as sigma_A in paper)
         sigma_a_scores = FAIM._compute_sigma_a_scores(discrete_y_scores, y_groundtruth, sensitive_features)
 
-        # Transform to histogram
-        df = pd.DataFrame(
-            {
-                "discrete_y_scores": discrete_y_scores,
-                "y_groundtruth": y_groundtruth,
-                "sensitive_features": sensitive_features,
-                "sigma_a": sigma_a_scores,
-            }
+        return pd.DataFrame(
+            data={
+                sensitive_feature: np.histogram(
+                    sigma_a_scores[sensitive_features == sensitive_feature],
+                    bins=self.normalized_discrete_score_values,
+                    density=False,
+                )[0]
+                for sensitive_feature in np.unique(sensitive_features)
+            },
+            index=self.normalized_discrete_score_values[:-1],
         )
 
     @staticmethod
@@ -160,11 +162,14 @@ class FAIM:
                 "sensitive_features": sensitive_features,
             }
         )
-        lambda_plus_all_groups = df.groupby(["sensitive_features", "discrete_y_scores"], sort=False).agg(
-            sigma_a=("y_groundtruth", "mean")
-        )
+        calibrated_score_by_sensitive_feature_and_discrete_score = df.groupby(
+            ["sensitive_features", "discrete_y_scores"], sort=False
+        ).agg(sigma_a=("y_groundtruth", "mean"))
         return df.merge(
-            lambda_plus_all_groups, how="left", left_on=["sensitive_features", "discrete_y_scores"], right_index=True
+            calibrated_score_by_sensitive_feature_and_discrete_score,
+            how="left",
+            left_on=["sensitive_features", "discrete_y_scores"],
+            right_index=True,
         )["sigma_a"].to_numpy()
 
     @staticmethod
