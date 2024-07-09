@@ -30,43 +30,169 @@ class ScikitModel(Protocol):
 
 
 class FAIM:
+    """
+    Parameters
+    ----------
+    thetas
+        Either a dictionary with group ids and theta values for each group, or a list of three theta values
+        to be applied to each group. Thetas determine how far a score distribution is to be moved towards
+            the barycenter representing the three mutually exclusive fairness criteria:
+                1. Calibration between groups (scores actually correspond to probability of positive)
+                2. Balance for the negative class (average score of truly negative individuals equal across groups)
+                3. Balance for the positive class (average score of truly positive individuals equal across groups)
+    score_discretization_step
+        Defines how scores are discretized for optimal transport, i.e. a value of 0.01 leads to a score discretization
+        of 0.0, 0.01, 0.02, ... 0.99, 1.00 (note that the algorithm only accepts normalized scores)
+    optimal_transport_regularization
+        Regularization parameter for optimal transport, see POT documentation (`reg` argument) for details
+        (https://pythonot.github.io/all.html)
+    random_generator
+        Numpy random generator or integer seed - provide when exact reproducibility is desired
+
+    Examples
+    --------
+
+
+    """
+
     def __init__(
-        self, thetas: list[float], prefit: bool = False, random_generator: Generator | int | None = None
+        self,
+        thetas: list[float] | dict[Any, list[float]],
+        score_discretization_step: float = 0.01,
+        score_map: dict[Any, NDArray[np.float64]] | None = None,
+        optimal_transport_regularization: float = 0.01,
+        random_generator: Generator | int | None = None,
     ) -> None:
+        # Validate and set FAIM parameters
         self._validate_thetas(thetas)
+
         if random_generator is None:
             random_generator = Generator(PCG64(43))
         elif isinstance(random_generator, int):
             random_generator = Generator(PCG64(random_generator))
 
         self.thetas: NDArray[np.float64] = np.array(thetas)
-        self.prefit = prefit
+        self.score_discretization_step = score_discretization_step
+        self.optimal_transport_regularization = optimal_transport_regularization
 
+        # Use score map if provided
+        if score_map is None:
+            self.prefit = False
+        else:
+            self.prefit = True
+        self.score_map = score_map
+
+        # Implementation parameters
         self.random_generator = random_generator
 
     def fit(
-        self, y_scores: Iterable[Any], y_groundtruth: Iterable[Any], *, sensitive_features: Iterable[Any]
+        self, y_scores: Iterable[float], y_groundtruth: Iterable[Any], *, sensitive_features: Iterable[Any]
     ) -> "FAIM":
-        ...
+        y_scores, y_groundtruth, sensitive_features, y_scores_discretized = self._validate_and_format_inputs(
+            y_scores, y_groundtruth, sensitive_features, score_discretization_step=self.score_discretization_step
+        )
+
+        # Discretize Scores
+        discrete_y_scores = y_scores[np.digitize(y_scores, self.score_discretization) - 1]
+
+        # Compute sigma_a scores
+        sigma_a_scores = self._compute_sigma_a_scores(discrete_y_scores, y_groundtruth, sensitive_features)
 
     def predict(self, y_scores: Iterable[Any], *, sensitive_features: Iterable[Any]) -> NDArray[np.float64]:
-        ...
+        discrete_y_scores = y_scores[np.digitize(y_scores, self.score_discretization) - 1]
 
     @staticmethod
-    def _validate_thetas(thetas: list[float]) -> None:
-        if len(thetas) and not len(thetas) % 3 == 0:
+    def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
+        if isinstance(thetas, list) and len(thetas) != 3:
             raise ValueError(
-                "`thetas` must have a multiple of three values, one for each group. If only three values are provided, "
-                "those same values will be applied to each group"
+                "`thetas` must have three values if provided as a list. The three values will be applied to each group."
             )
+        if isinstance(thetas, dict):
+            for group_id, group_thetas in thetas.items():
+                if len(group_thetas) != 3:
+                    raise ValueError(
+                        f"There must be 3 theta values for each group  but group {group_id} has "
+                        f"{len(group_thetas)} theta values."
+                    )
 
     def get_faim_scores(self, scores: Iterable[float], group: Iterable[float]) -> NDArray[np.float64]:
         if not self.is_fit:
             raise NotFittedError()
         ...
 
+    @staticmethod
+    def _compute_sigma_a_scores(
+        discrete_y_scores: NDArray[np.float64],
+        y_groundtruth: NDArray[np.float64],
+        sensitive_features: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        df = pd.DataFrame(
+            {
+                "discrete_y_scores": discrete_y_scores,
+                "y_groundtruth": y_groundtruth,
+                "sensitive_features": sensitive_features,
+            }
+        )
+        lambda_plus_all_groups = df.groupby(["sensitive_features", "discrete_y_scores"], sort=False).agg(
+            sigma_a=("y_groundtruth", np.mean)
+        )
+        return df.merge(
+            lambda_plus_all_groups, how="left", left_on=["sensitive_features", "discrete_y_scores"], right_index=True
+        )["sigma_a"].to_numpy()
+
+    @staticmethod
+    def _computer_sigma_b_c_scores(
+        discrete_y_scores: NDArray[np.float64],
+        y_groundtruth: NDArray[np.float64],
+        sensitive_features: NDArray[np.float64],
+    ):
+        df = pd.DataFrame(
+            {
+                "discrete_y_scores": discrete_y_scores,
+                "y_groundtruth": y_groundtruth,
+                "sensitive_features": sensitive_features,
+            }
+        )
+
     def _get_barycenters(self):
         ...
+
+    @staticmethod
+    def histogram_by_sensitive_feature(y_scores, sensitive_features) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                sensitive_feature: y_scores[sensitive_features == sensitive_feature]
+                for sensitive_feature in np.unique(sensitive_features)
+            }
+        )
+
+    def _validate_and_format_inputs(
+        self,
+        y_scores: Iterable[float],
+        y_groundtruth: Iterable[Any],
+        sensitive_features: Iterable[Any],
+        score_discretization_step: float,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+        y_scores = np.array(y_scores)
+        y_groundtruth = np.array(y_groundtruth, dtype=bool)
+        sensitive_features = np.array(sensitive_features)
+
+        if not 0 <= score_discretization_step <= 0.1:
+            raise ValueError(
+                f"score_discretization_step must be between 0 and 0.1 ({score_discretization_step} passed), ."
+            )
+
+        if y_scores.max() > 1 or y_scores.min() < 0:
+            raise ValueError("y_scores must be between 0 and 1.")
+
+        if len(y_scores) != len(y_groundtruth) != len(sensitive_features):
+            raise ValueError("Length of y_scores, y_groundtruth, and sensitive_features must be equal.")
+
+        y_scores_discretized = y_scores[
+            np.digitize(y_scores, np.arange(0, 1 + score_discretization_step, score_discretization_step)) - 1
+        ]
+
+        return y_scores, y_groundtruth, sensitive_features, y_scores_discretized
 
 
 class FaimEstimator(BaseEstimator):
