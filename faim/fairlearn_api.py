@@ -1,5 +1,5 @@
 # ToDo: (WIP) Create an API that conforms to ML community standards
-
+from functools import lru_cache
 from typing import Iterable, Protocol, Any, cast
 from warnings import warn
 
@@ -92,11 +92,10 @@ class FAIM:
             y_scores, y_groundtruth, sensitive_features, score_discretization_step=self.score_discretization_step
         )
 
-        # Discretize Scores
-        discrete_y_scores = y_scores[np.digitize(y_scores, self.score_discretization) - 1]
-
         # Compute sigma_a scores
-        sigma_a_scores = self._compute_sigma_a_scores(discrete_y_scores, y_groundtruth, sensitive_features)
+        sigma_a_scores = self._compute_mu_a(y_scores_discretized, y_groundtruth, sensitive_features)
+
+        return self
 
     def predict(self, y_scores: Iterable[Any], *, sensitive_features: Iterable[Any]) -> NDArray[np.float64]:
         discrete_y_scores = y_scores[np.digitize(y_scores, self.score_discretization) - 1]
@@ -120,6 +119,34 @@ class FAIM:
             raise NotFittedError()
         ...
 
+    @property
+    @lru_cache
+    def normalized_discrete_score_values(self) -> NDArray[np.float64]:
+        return np.arange(0, 1 + self.score_discretization_step, self.score_discretization_step)
+
+    def _discretize_scores(self, scores: NDArray[np.float64]) -> NDArray[np.float64]:
+        return self.normalized_discrete_score_values[np.digitize(scores, self.normalized_discrete_score_values) - 1]
+
+    @staticmethod
+    def _compute_mu_a(
+        discrete_y_scores: NDArray[np.float64],
+        y_groundtruth: NDArray[np.float64],
+        sensitive_features: NDArray[np.float64],
+    ) -> pd.DataFrame:
+        """Compute calibrated score distribution by group."""
+        # Get calibrated scores (known as sigma_A in paper)
+        sigma_a_scores = FAIM._compute_sigma_a_scores(discrete_y_scores, y_groundtruth, sensitive_features)
+
+        # Transform to histogram
+        df = pd.DataFrame(
+            {
+                "discrete_y_scores": discrete_y_scores,
+                "y_groundtruth": y_groundtruth,
+                "sensitive_features": sensitive_features,
+                "sigma_a": sigma_a_scores,
+            }
+        )
+
     @staticmethod
     def _compute_sigma_a_scores(
         discrete_y_scores: NDArray[np.float64],
@@ -134,7 +161,7 @@ class FAIM:
             }
         )
         lambda_plus_all_groups = df.groupby(["sensitive_features", "discrete_y_scores"], sort=False).agg(
-            sigma_a=("y_groundtruth", np.mean)
+            sigma_a=("y_groundtruth", "mean")
         )
         return df.merge(
             lambda_plus_all_groups, how="left", left_on=["sensitive_features", "discrete_y_scores"], right_index=True
@@ -188,9 +215,7 @@ class FAIM:
         if len(y_scores) != len(y_groundtruth) != len(sensitive_features):
             raise ValueError("Length of y_scores, y_groundtruth, and sensitive_features must be equal.")
 
-        y_scores_discretized = y_scores[
-            np.digitize(y_scores, np.arange(0, 1 + score_discretization_step, score_discretization_step)) - 1
-        ]
+        y_scores_discretized = FAIM._discretize_scores(scores=y_scores, step=score_discretization_step)
 
         return y_scores, y_groundtruth, sensitive_features, y_scores_discretized
 

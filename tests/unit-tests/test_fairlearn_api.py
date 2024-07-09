@@ -14,3 +14,17 @@ def test_compute_sigma_a() -> None:
 
     # THEN
     assert np.array_equal(sigma_a, np.array([0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0]))
+
+
+def test_discretize_scores() -> None:
+    # GIVEN
+    y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
+    step = 0.5
+
+    faim = FAIM(thetas=[0, 0, 1], score_discretization_step=0.5)
+
+    # WHEN
+    discretized = faim._discretize_scores(y_scores)
+
+    # THEN
+    assert np.array_equal(discretized, np.array([0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0]))
