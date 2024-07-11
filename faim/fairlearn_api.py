@@ -87,15 +87,15 @@ class FAIM:
         self.random_generator = random_generator
 
     def fit(
-        self, y_scores: Iterable[float], y_groundtruth: Iterable[Any], *, sensitive_features: Iterable[Any]
+        self, y_scores: Iterable[float], y_ground_truth: Iterable[Any], *, sensitive_features: Iterable[Any]
     ) -> "FAIM":
-        y_scores, y_groundtruth, sensitive_features = self._validate_and_format_inputs(
-            y_scores, y_groundtruth, sensitive_features, score_discretization_step=self.score_discretization_step
+        y_scores, y_ground_truth, sensitive_features = self._validate_and_format_inputs(
+            y_scores, y_ground_truth, sensitive_features, score_discretization_step=self.score_discretization_step
         )
         y_scores_discretized = self._discretize_scores(y_scores)
 
-        # Compute sigma_a scores
-        sigma_a_scores = self._compute_mu_a(y_scores_discretized, y_groundtruth, sensitive_features)
+        # Compute mu_A (calibrated score distribution)
+        mu_a = self._compute_mu_a(y_scores_discretized, y_ground_truth, sensitive_features)
 
         return self
 
@@ -145,17 +145,18 @@ class FAIM:
     def _compute_mu_a(
         self,
         discrete_y_scores: NDArray[np.float64],
-        y_groundtruth: NDArray[np.float64],
+        y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
     ) -> pd.DataFrame:
         """Compute calibrated score distribution by group."""
-        # Get calibrated scores (known as sigma_A in paper)
-        sigma_a_scores = FAIM._compute_sigma_a_scores(discrete_y_scores, y_groundtruth, sensitive_features)
+        # Get calibrated scores (known as S_A in paper)
+        calibrated_scores = FAIM._compute_calibrated_scores(discrete_y_scores, y_ground_truth, sensitive_features)
 
+        # Return distributions (index = discrete scores, columns = sensitive groups)
         return pd.DataFrame(
             data={
                 sensitive_feature: np.histogram(
-                    sigma_a_scores[sensitive_features == sensitive_feature],
+                    calibrated_scores[sensitive_features == sensitive_feature],
                     bins=self.normalized_discrete_score_values,
                     density=False,
                 )[0]
@@ -165,41 +166,66 @@ class FAIM:
         )
 
     @staticmethod
-    def _compute_sigma_a_scores(
+    def _compute_calibrated_scores(
         discrete_y_scores: NDArray[np.float64],
-        y_groundtruth: NDArray[np.float64],
+        y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         df = pd.DataFrame(
             {
                 "discrete_y_scores": discrete_y_scores,
-                "y_groundtruth": y_groundtruth,
+                "y_ground_truth": y_ground_truth,
                 "sensitive_features": sensitive_features,
             }
         )
         calibrated_score_by_sensitive_feature_and_discrete_score = df.groupby(
             ["sensitive_features", "discrete_y_scores"], sort=False
-        ).agg(sigma_a=("y_groundtruth", "mean"))
+        ).agg(calibrated_scores=("y_ground_truth", "mean"))
         return df.merge(
             calibrated_score_by_sensitive_feature_and_discrete_score,
             how="left",
             left_on=["sensitive_features", "discrete_y_scores"],
             right_index=True,
-        )["sigma_a"].to_numpy()
+        )["calibrated_scores"].to_numpy()
 
-    @staticmethod
-    def _computer_sigma_b_c_scores(
+    def _compute_sigma_b_and_c_score_distributions(
+        self,
         discrete_y_scores: NDArray[np.float64],
-        y_groundtruth: NDArray[np.float64],
+        y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
     ):
-        df = pd.DataFrame(
+        data = pd.DataFrame(
             {
                 "discrete_y_scores": discrete_y_scores,
-                "y_groundtruth": y_groundtruth,
+                "y_ground_truth": y_ground_truth,
                 "sensitive_features": sensitive_features,
             }
         )
+
+        # Get discretized score counts by sensitive group and ground truth value
+        sensitive_groups = np.unique(sensitive_features)
+        ground_truth_values = np.unique(y_ground_truth)
+        cartesion_product_of_index_features_with_discrete_score_basis = pd.MultiIndex.from_product(
+            [sensitive_groups, ground_truth_values, self.normalized_discrete_score_values]
+        )
+        grouped_discretized_score_counts = (
+            data.groupby(["sensitive_features", "y_ground_truth", "discrete_y_scores"], sort=True)
+            .agg(score_count=("discrete_y_scores", "count"))
+            .reindex(cartesion_product_of_index_features_with_discrete_score_basis)
+            .fillna(0)
+        )
+
+        # Normalized score counts
+        for group in sensitive_groups:
+            for ground_truth_value in ground_truth_values:
+                grouped_discretized_score_counts.loc[group, ground_truth_value] = (
+                    grouped_discretized_score_counts.loc[group, ground_truth_value]
+                    / grouped_discretized_score_counts.loc[group, ground_truth_value].sum()
+                ).to_numpy()
+
+        grouped_discretized_score_counts.index.names = ["sensitive_group", "ground_truth", "y_score"]
+        grouped_discretized_score_counts.columns = ["fraction"]
+        return grouped_discretized_score_counts
 
     def _get_barycenters(self):
         ...
@@ -216,13 +242,13 @@ class FAIM:
     def _validate_and_format_inputs(
         self,
         y_scores: Iterable[float],
-        y_groundtruth: Optional[Iterable[Any]],
+        y_ground_truth: Optional[Iterable[Any]],
         sensitive_features: Iterable[Any],
         score_discretization_step: float,
     ) -> tuple[NDArray[np.float64], Optional[NDArray[np.float64]], NDArray[np.float64]]:
         y_scores = np.array(y_scores)
-        if y_groundtruth is not None:
-            y_groundtruth = np.array(y_groundtruth, dtype=bool)
+        if y_ground_truth is not None:
+            y_ground_truth = np.array(y_ground_truth, dtype=bool)
         sensitive_features = np.array(sensitive_features)
 
         if not 0 <= score_discretization_step <= 0.2:
@@ -238,12 +264,12 @@ class FAIM:
                 f"Length of y_scores ({len(y_scores)}) and sensitive_features ({len(sensitive_features)}) must be equal."
             )
 
-        if y_groundtruth is not None and len(y_groundtruth) != len(y_scores):
+        if y_ground_truth is not None and len(y_ground_truth) != len(y_scores):
             raise ValueError(
-                f"Length of y_groundtruth ({len(y_groundtruth)}) and y_scores ({len(y_scores)}) must be equal."
+                f"Length of y_ground_truth ({len(y_ground_truth)}) and y_scores ({len(y_scores)}) must be equal."
             )
 
-        return y_scores, y_groundtruth, sensitive_features
+        return y_scores, y_ground_truth, sensitive_features
 
 
 class FaimEstimator(BaseEstimator):
@@ -346,7 +372,7 @@ class FaimEstimator(BaseEstimator):
         y_scores = _get_soft_predictions(estimator=self.estimator_, X=X, predict_method="predict")
 
         if not self.faim.prefit:
-            self.faim.fit(y_scores=y_scores, y_groundtruth=y, sensitive_features=sensitive_features)
+            self.faim.fit(y_scores=y_scores, y_ground_truth=y, sensitive_features=sensitive_features)
 
         return self
 

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pandas import Index
 from pandas._testing import assert_frame_equal
 
 from faim.fairlearn_api import FAIM
@@ -20,14 +21,14 @@ class TestFAIM:
         # THEN
         assert faim
 
-    def test_compute_sigma_a(self) -> None:
+    def test_compute_calibrated_scores(self) -> None:
         # GIVEN
         y_groundtruth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
 
         # WHEN
-        sigma_a = FAIM._compute_sigma_a_scores(discrete_y_scores, y_groundtruth, sensitive_features)
+        sigma_a = FAIM._compute_calibrated_scores(discrete_y_scores, y_groundtruth, sensitive_features)
 
         # THEN
         assert np.array_equal(sigma_a, np.array([0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0]))
@@ -52,6 +53,36 @@ class TestFAIM:
                 index=[0, 0.2, 0.4, 0.6, 0.8],
             ),
             atol=1e-8,
+        )
+
+    def test_compute_sigma_b_and_c_score_distributions(self) -> None:
+        # GIVEN
+        y_groundtruth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
+        discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
+        sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+        score_discretization_step = 0.2
+
+        faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
+
+        # WHEN
+        grouped_score_distributions = faim._compute_sigma_b_and_c_score_distributions(
+            discrete_y_scores, y_groundtruth, sensitive_features
+        )
+
+        # THEN
+        assert np.array_equal(
+            np.squeeze(grouped_score_distributions.loc[0, 0].to_numpy()), np.array([0, 1.0, 0, 0, 0, 0])
+        )
+        np.testing.assert_array_almost_equal(
+            np.squeeze(grouped_score_distributions.loc[0, 1].to_numpy()),
+            np.array([0, 0.33, 0.33, 0.33, 0, 0]),
+            decimal=2,
+        )
+        assert np.array_equal(
+            np.squeeze(grouped_score_distributions.loc[1, 0].to_numpy()), np.array([0, 0.5, 0, 0.5, 0, 0])
+        )
+        assert np.array_equal(
+            np.squeeze(grouped_score_distributions.loc[1, 1].to_numpy()), np.array([0, 0, 0, 1.0, 0, 0])
         )
 
     def test_normalized_discrete_score_values(self) -> None:
