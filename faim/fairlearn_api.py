@@ -10,7 +10,7 @@ import pandas as pd
 from fairlearn.postprocessing._constants import BASE_ESTIMATOR_NONE_ERROR_MESSAGE, BASE_ESTIMATOR_NOT_FITTED_WARNING
 from fairlearn.utils._common import _get_soft_predictions
 from fairlearn.utils._input_validation import _validate_and_reformat_input
-from numpy._typing import NDArray
+from numpy._typing import NDArray, ArrayLike
 from numpy.random import Generator, PCG64
 from sklearn.base import BaseEstimator, clone
 from sklearn.exceptions import NotFittedError
@@ -97,11 +97,15 @@ class FAIM:
 
         # Compute mu_A (calibrated score distribution)
         mu_a = self._compute_mu_a(y_scores_discretized, y_ground_truth, sensitive_features)
+        mu_b, mu_c = self._compute_mu_b_and_c(y_scores_discretized, y_ground_truth, sensitive_features)
 
         return self
 
     def predict(self, y_scores: Iterable[Any], *, sensitive_features: Iterable[Any]) -> NDArray[np.float64]:
-        discrete_y_scores = y_scores[np.digitize(y_scores, self.score_discretization) - 1]
+        y_scores, y_ground_truth, sensitive_features = self._validate_and_format_inputs(
+            y_scores, None, sensitive_features, score_discretization_step=self.score_discretization_step
+        )
+        y_scores_discretized = self._discretize_scores(y_scores)
 
     @staticmethod
     def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
@@ -125,7 +129,7 @@ class FAIM:
     @property
     @lru_cache
     def normalized_discrete_score_values(self) -> NDArray[np.float64]:
-        return self._get_normalized_discrete_score_values(score_discretization_step=self.score_discretization_step)
+        return self._get_discrete_score_values(score_discretization_step=self.score_discretization_step)
 
     @property
     @lru_cache
@@ -134,9 +138,9 @@ class FAIM:
         return loss_matrix / loss_matrix.max()
 
     @staticmethod
-    def _get_normalized_discrete_score_values(score_discretization_step: float) -> NDArray[np.float64]:
+    def _get_discrete_score_values(score_discretization_step: float) -> NDArray[np.float64]:
         return np.round(
-            np.arange(0, 1 + score_discretization_step, score_discretization_step),
+            np.arange(0, 1, score_discretization_step),
             decimals=int(np.ceil(-np.log10(score_discretization_step)) + 1),
         )
 
@@ -145,7 +149,7 @@ class FAIM:
         if step is None:
             normalized_discrete_score_values = self.normalized_discrete_score_values
         else:
-            normalized_discrete_score_values = self._get_normalized_discrete_score_values(step)
+            normalized_discrete_score_values = self._get_discrete_score_values(step)
 
         return self.normalized_discrete_score_values[np.digitize(scores, normalized_discrete_score_values) - 1]
 
@@ -155,53 +159,89 @@ class FAIM:
         y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
     ) -> pd.DataFrame:
-        """Compute calibrated score distribution by group."""
+        """Compute mu_t^A from paper.
+
+        This is the score distribution expected (per group) if all scores are calibrated."""
+
         # Get calibrated scores (known as S_A in paper)
         calibrated_scores = FAIM._compute_calibrated_scores(discrete_y_scores, y_ground_truth, sensitive_features)
 
         # Return distributions (index = discrete scores, columns = sensitive groups)
         return pd.DataFrame(
             data={
-                sensitive_feature: np.histogram(
-                    calibrated_scores[sensitive_features == sensitive_feature],
-                    bins=self.normalized_discrete_score_values,
-                    density=False,
-                )[0]
+                sensitive_feature: self._histogram(calibrated_scores[sensitive_features == sensitive_feature])
                 for sensitive_feature in np.unique(sensitive_features)
             },
-            index=self.normalized_discrete_score_values[:-1],
+            index=self.normalized_discrete_score_values,
         )
 
-    def _compute_sigma_bar_minus_and_plus(
+    def _compute_mu_b_and_c(
         self,
         discrete_y_scores: NDArray[np.float64],
         y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        """Compute score distributions for groups B and C."""
-        # Get score distributions for groups B and C (known as sigma_t^[-+] in paper)
-        grouped_score_distributions = self._compute_sigma_b_and_c_score_distributions(
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Compute mu_t^B and mu_t^C from paper.
+
+        These are the group weighted expected score distributions (for each group) when negative and positive
+        classes are balanced, respectively.
+        """
+        # Get score distributions for groups B and C (known as mu_t^[-+] in paper)
+        sigma_bar_minus, sigma_bar_plus = self._compute_sigma_bar_minus_and_plus(
             discrete_y_scores, y_ground_truth, sensitive_features
         )
-        sensitive_groups, sensitive_group_counts = np.unique(sensitive_features, return_counts=True)
-        group_weights = sensitive_group_counts / sum(sensitive_group_counts)
 
-        # Get score distributions that balanced negative and positive classes
-        #  (sigma_bar^- and sigma_bar^+ in the paper, respectively)
-        balanced_score_distribution_for_negative_class = ot.bregman.barycenter(
-            A=grouped_score_distributions.unstack("sensitive_group").loc[False].to_numpy(),
-            M=self._ot_loss_matrix,
-            reg=self.optimal_transport_regularization,
-            weights=group_weights,
-        )
-        balanced_score_distribution_for_positive_class = ot.bregman.barycenter(
-            A=grouped_score_distributions.unstack("sensitive_group").loc[True].to_numpy(),
-            M=self._ot_loss_matrix,
-            reg=self.optimal_transport_regularization,
-            weights=group_weights,
+        mus: dict[str, dict[str, NDArray[np.float64]]] = {}
+        mu_dfs: list[pd.DataFrame] = []
+        for sigma_bar, ground_truth_value in zip((sigma_bar_minus, sigma_bar_plus), np.unique(y_ground_truth)):
+            mus[ground_truth_value] = {}
+            for sensitive_group in np.unique(sensitive_features):
+
+                discrete_fair_score_map = self.get_discrete_fair_score_map(
+                    scores=discrete_y_scores[
+                        (y_ground_truth == ground_truth_value) & (sensitive_features == sensitive_group)
+                    ],
+                    fair_score_distribution=sigma_bar,
+                )
+
+                mus[ground_truth_value][sensitive_group] = self._histogram(
+                    [
+                        discrete_fair_score_map[score]
+                        for score in discrete_y_scores[y_ground_truth == ground_truth_value]
+                    ],
+                    normalize=True,
+                )
+
+            mu_dfs.append(
+                pd.DataFrame(
+                    data={sensitive_group: mu for sensitive_group, mu in mus[ground_truth_value].items()},
+                    index=self.normalized_discrete_score_values,
+                )
+            )
+
+        assert len(mu_dfs) == 2
+        return tuple(mu_dfs)
+
+    def get_discrete_fair_score_map(
+        self, scores: NDArray[np.float64], fair_score_distribution: NDArray[np.float64]
+    ) -> dict[float, float]:
+        transport_map = ot.emd(
+            self._histogram(scores, normalize=True),
+            fair_score_distribution,
+            self._ot_loss_matrix,
         )
 
-        return balanced_score_distribution_for_negative_class, balanced_score_distribution_for_positive_class
+        # Normalize each row of transport ignoring rows that sum to 0
+        row_sums = np.matmul(transport_map, np.ones(transport_map.shape[0]))
+        inverse_norm_vec = np.reciprocal(row_sums, where=row_sums != 0)
+        norm_matrix = np.diag(inverse_norm_vec)
+        normalized_transport_map = np.matmul(norm_matrix, transport_map)
+
+        fair_score_map_values = np.matmul(normalized_transport_map, self.normalized_discrete_score_values.T)
+
+        return {
+            score: fair_score for score, fair_score in zip(self.normalized_discrete_score_values, fair_score_map_values)
+        }
 
     @staticmethod
     def _compute_calibrated_scores(
@@ -226,12 +266,51 @@ class FAIM:
             right_index=True,
         )["calibrated_scores"].to_numpy()
 
-    def _compute_sigma_b_and_c_score_distributions(
+    def _compute_sigma_bar_minus_and_plus(
+        self,
+        discrete_y_scores: NDArray[np.float64],
+        y_ground_truth: NDArray[np.float64],
+        sensitive_features: NDArray[np.float64],
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Compute \bar{sigma}^- and \bar{sigma}^+ from paper.
+
+        These are the group-weighted expected score distributions when negative and positive
+        classes are balanced, respectively.
+        """
+        # Get score distributions for each group (known as sigma_t^[-+] in paper)
+        sigma_minus_and_plus_by_sensitive_group = self._compute_sigma_minus_and_plus_by_sensitive_group(
+            discrete_y_scores, y_ground_truth, sensitive_features
+        )
+        sensitive_groups, sensitive_group_counts = np.unique(sensitive_features, return_counts=True)
+        group_weights = sensitive_group_counts / sum(sensitive_group_counts)
+
+        # Get idealized score distributions that balanced negative and positive classes for each group
+        #  (sigma_bar^- and sigma_bar^+ in the paper, respectively)
+        balanced_score_distribution_for_negative_class = ot.bregman.barycenter(
+            A=sigma_minus_and_plus_by_sensitive_group.unstack("sensitive_group").loc[False].to_numpy(),
+            M=self._ot_loss_matrix,
+            reg=self.optimal_transport_regularization,
+            weights=group_weights,
+        )
+        balanced_score_distribution_for_positive_class = ot.bregman.barycenter(
+            A=sigma_minus_and_plus_by_sensitive_group.unstack("sensitive_group").loc[True].to_numpy(),
+            M=self._ot_loss_matrix,
+            reg=self.optimal_transport_regularization,
+            weights=group_weights,
+        )
+
+        return balanced_score_distribution_for_negative_class, balanced_score_distribution_for_positive_class
+
+    def _compute_sigma_minus_and_plus_by_sensitive_group(
         self,
         discrete_y_scores: NDArray[np.float64],
         y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
     ):
+        """Compute sigma_t^[-+] distributions from paper.
+
+        These are the fraction of negative and positive class for each score value for each group.
+        """
         data = pd.DataFrame(
             {
                 "discrete_y_scores": discrete_y_scores,
@@ -265,17 +344,16 @@ class FAIM:
         grouped_discretized_score_counts.columns = ["fraction"]
         return grouped_discretized_score_counts
 
-    def _get_barycenters(self):
-        ...
+    def _histogram(self, scores: ArrayLike, normalize: bool = False) -> NDArray[np.float64]:
+        hist = np.histogram(
+            scores,
+            bins=np.append(self.normalized_discrete_score_values, 1),
+            density=False,
+        )[0]
 
-    @staticmethod
-    def histogram_by_sensitive_feature(y_scores, sensitive_features) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                sensitive_feature: y_scores[sensitive_features == sensitive_feature]
-                for sensitive_feature in np.unique(sensitive_features)
-            }
-        )
+        if normalize:
+            return hist / len(scores)
+        return hist
 
     def _validate_and_format_inputs(
         self,

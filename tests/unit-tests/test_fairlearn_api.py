@@ -55,7 +55,27 @@ class TestFAIM:
             atol=1e-8,
         )
 
-    def test_compute_sigma_b_and_c_score_distributions(self) -> None:
+    def test_compute_mu_b_and_c(self) -> None:
+        # GIVEN
+        y_groundtruth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
+        discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
+        sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+        score_discretization_step = 0.2
+
+        faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
+
+        # WHEN
+        mu_b, mu_c = faim._compute_mu_b_and_c(discrete_y_scores, y_groundtruth, sensitive_features)
+
+        # THEN
+        assert_frame_equal(
+            mu_b, pd.DataFrame(data={0: [0, 0.5, 0, 0.5, 0], 1: [0, 0.5, 0, 0.5, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
+        )
+        assert_frame_equal(
+            mu_c, pd.DataFrame(data={0: [0.5, 0.25, 0.25, 0, 0], 1: [0.5, 0, 0.5, 0, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
+        )
+
+    def test_compute_sigma_minus_and_plus_by_sensitive_group(self) -> None:
         # GIVEN
         y_groundtruth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
@@ -65,24 +85,24 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # WHEN
-        grouped_score_distributions = faim._compute_sigma_b_and_c_score_distributions(
+        sigma_minus_and_plus_by_group = faim._compute_sigma_minus_and_plus_by_sensitive_group(
             discrete_y_scores, y_groundtruth, sensitive_features
         )
 
         # THEN
         assert np.array_equal(
-            np.squeeze(grouped_score_distributions.loc[0, 0].to_numpy()), np.array([0, 1.0, 0, 0, 0, 0])
+            np.squeeze(sigma_minus_and_plus_by_group.loc[0, 0].to_numpy()), np.array([0, 1.0, 0, 0, 0])
         )
         np.testing.assert_array_almost_equal(
-            np.squeeze(grouped_score_distributions.loc[0, 1].to_numpy()),
-            np.array([0, 0.33, 0.33, 0.33, 0, 0]),
+            np.squeeze(sigma_minus_and_plus_by_group.loc[0, 1].to_numpy()),
+            np.array([0, 0.33, 0.33, 0.33, 0]),
             decimal=2,
         )
         assert np.array_equal(
-            np.squeeze(grouped_score_distributions.loc[1, 0].to_numpy()), np.array([0, 0.5, 0, 0.5, 0, 0])
+            np.squeeze(sigma_minus_and_plus_by_group.loc[1, 0].to_numpy()), np.array([0, 0.5, 0, 0.5, 0])
         )
         assert np.array_equal(
-            np.squeeze(grouped_score_distributions.loc[1, 1].to_numpy()), np.array([0, 0, 0, 1.0, 0, 0])
+            np.squeeze(sigma_minus_and_plus_by_group.loc[1, 1].to_numpy()), np.array([0, 0, 0, 1.0, 0])
         )
 
     def test_compute_sigma_bar_minus_and_plus(self) -> None:
@@ -115,11 +135,11 @@ class TestFAIM:
         # THEN fixed value expected
         np.testing.assert_array_almost_equal(
             sigma_bar_minus,
-            np.array([8.97865620e-3, 4.90227959e-1, 2.88368192e-1, 2.12319076e-1, 1.06115367e-4, 1.19633925e-11]),
+            np.array([9.633956e-04, 4.990513e-01, 2.711831e-01, 2.288006e-01, 1.592632e-06]),
         )
         np.testing.assert_array_almost_equal(
             sigma_bar_plus,
-            np.array([6.07960928e-12, 5.40241487e-5, 1.61645009e-1, 3.38221254e-1, 4.90463861e-1, 9.61585066e-3]),
+            np.array([1.019634e-17, 7.341867e-07, 1.970870e-01, 8.014763e-01, 1.435954e-03]),
         )
 
     def test_normalized_discrete_score_values(self) -> None:
@@ -130,17 +150,17 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # THEN
-        assert np.array_equal(faim.normalized_discrete_score_values, np.array([0.0, 0.2, 0.4, 0.6, 0.8, 1.0]))
+        assert np.array_equal(faim.normalized_discrete_score_values, np.array([0.0, 0.2, 0.4, 0.6, 0.8]))
 
     def test_discretize_scores(self) -> None:
         # GIVEN
-        y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
+        y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2, 0.9999999, 0.5, 1.0])
         step = 0.5
 
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=step)
 
         # WHEN
-        discretized = faim._discretize_scores(y_scores)
+        discretized_y_scores = faim._discretize_scores(y_scores)
 
         # THEN
-        assert np.array_equal(discretized, np.array([0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0]))
+        assert np.array_equal(discretized_y_scores, np.array([0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 0.5, 0.5]))
