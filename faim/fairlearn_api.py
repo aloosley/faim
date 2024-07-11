@@ -1,4 +1,5 @@
 # ToDo: (WIP) Create an API that conforms to ML community standards
+from copy import deepcopy
 from decimal import Decimal
 from functools import lru_cache
 from typing import Iterable, Protocol, Any, cast, Optional
@@ -45,6 +46,9 @@ class FAIM:
     score_discretization_step
         Defines how scores are discretized for optimal transport, i.e. a value of 0.01 leads to a score discretization
         of 0.0, 0.01, 0.02, ... 0.99, 1.00 (note that the algorithm only accepts normalized scores)
+    score_transport_maps_by_group
+        This is normally determined by fitting the data, however, you can also pass score transport maps for each group
+        here to skip the fitting step and immediate use the model for score mapping
     optimal_transport_regularization
         Regularization parameter for optimal transport, see POT documentation (`reg` argument) for details
         (https://pythonot.github.io/all.html)
@@ -61,7 +65,7 @@ class FAIM:
         self,
         thetas: list[float] | dict[Any, list[float]],
         score_discretization_step: float = 0.01,
-        score_map: dict[Any, NDArray[np.float64]] | None = None,
+        score_transport_maps_by_group: dict[Any, NDArray[np.float64]] | None = None,
         optimal_transport_regularization: float = 0.01,
         random_generator: Generator | int | None = None,
     ) -> None:
@@ -78,11 +82,11 @@ class FAIM:
         self.optimal_transport_regularization = optimal_transport_regularization
 
         # Use score map if provided
-        if score_map is None:
+        if score_transport_maps_by_group is None:
             self.prefit = False
         else:
             self.prefit = True
-        self.score_map = score_map
+        self.score_transport_maps_by_group = score_transport_maps_by_group
 
         # Implementation parameters
         self.random_generator = random_generator
@@ -99,13 +103,43 @@ class FAIM:
         mu_a = self._compute_mu_a(y_scores_discretized, y_ground_truth, sensitive_features)
         mu_b, mu_c = self._compute_mu_b_and_c(y_scores_discretized, y_ground_truth, sensitive_features)
 
-        return self
+        # Map thetas to dict keyed by group
+        sensitive_groups = np.unique(sensitive_features)
+        thetas = deepcopy(self.thetas)
+        if isinstance(thetas, list):
+            thetas = {group: thetas for group in sensitive_groups}
+
+        self.score_transport_maps_by_group: dict[Any, dict[float, float]] = {}
+        for sensitive_group in sensitive_groups:
+            barycenter = ot.bregman.barycenter(
+                A=np.stack((mu_a[sensitive_group], mu_b[sensitive_group], mu_c[sensitive_group]), axis=1),
+                M=self._ot_loss_matrix,
+                reg=self.optimal_transport_regularization,
+                weights=self.thetas[sensitive_group],
+            )
+
+            self.score_transport_maps_by_group[sensitive_group] = self.get_discrete_fair_score_map(
+                scores=y_scores_discretized,
+                fair_score_distribution=barycenter,
+            )
 
     def predict(self, y_scores: Iterable[Any], *, sensitive_features: Iterable[Any]) -> NDArray[np.float64]:
         y_scores, y_ground_truth, sensitive_features = self._validate_and_format_inputs(
             y_scores, None, sensitive_features, score_discretization_step=self.score_discretization_step
         )
         y_scores_discretized = self._discretize_scores(y_scores)
+
+        fair_y_scores = np.zeros(len(y_scores))
+        for sensitive_group in np.unique(sensitive_features):
+            group_score_mask = sensitive_features == sensitive_group
+            fair_y_scores[group_score_mask] = np.array(
+                [
+                    self.score_transport_maps_by_group[sensitive_group][score]
+                    for score in y_scores_discretized[group_score_mask]
+                ]
+            )
+
+        return fair_y_scores
 
     @staticmethod
     def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
