@@ -5,6 +5,7 @@ from typing import Iterable, Protocol, Any, cast, Optional
 from warnings import warn
 
 import numpy as np
+import ot
 import pandas as pd
 from fairlearn.postprocessing._constants import BASE_ESTIMATOR_NONE_ERROR_MESSAGE, BASE_ESTIMATOR_NOT_FITTED_WARNING
 from fairlearn.utils._common import _get_soft_predictions
@@ -126,6 +127,12 @@ class FAIM:
     def normalized_discrete_score_values(self) -> NDArray[np.float64]:
         return self._get_normalized_discrete_score_values(score_discretization_step=self.score_discretization_step)
 
+    @property
+    @lru_cache
+    def _ot_loss_matrix(self) -> NDArray[np.float64]:
+        loss_matrix = ot.utils.dist0(len(self.normalized_discrete_score_values))
+        return loss_matrix / loss_matrix.max()
+
     @staticmethod
     def _get_normalized_discrete_score_values(score_discretization_step: float) -> NDArray[np.float64]:
         return np.round(
@@ -164,6 +171,37 @@ class FAIM:
             },
             index=self.normalized_discrete_score_values[:-1],
         )
+
+    def _compute_sigma_bar_minus_and_plus(
+        self,
+        discrete_y_scores: NDArray[np.float64],
+        y_ground_truth: NDArray[np.float64],
+        sensitive_features: NDArray[np.float64],
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Compute score distributions for groups B and C."""
+        # Get score distributions for groups B and C (known as sigma_t^[-+] in paper)
+        grouped_score_distributions = self._compute_sigma_b_and_c_score_distributions(
+            discrete_y_scores, y_ground_truth, sensitive_features
+        )
+        sensitive_groups, sensitive_group_counts = np.unique(sensitive_features, return_counts=True)
+        group_weights = sensitive_group_counts / sum(sensitive_group_counts)
+
+        # Get score distributions that balanced negative and positive classes
+        #  (sigma_bar^- and sigma_bar^+ in the paper, respectively)
+        balanced_score_distribution_for_negative_class = ot.bregman.barycenter(
+            A=grouped_score_distributions.unstack("sensitive_group").loc[False].to_numpy(),
+            M=self._ot_loss_matrix,
+            reg=self.optimal_transport_regularization,
+            weights=group_weights,
+        )
+        balanced_score_distribution_for_positive_class = ot.bregman.barycenter(
+            A=grouped_score_distributions.unstack("sensitive_group").loc[True].to_numpy(),
+            M=self._ot_loss_matrix,
+            reg=self.optimal_transport_regularization,
+            weights=group_weights,
+        )
+
+        return balanced_score_distribution_for_negative_class, balanced_score_distribution_for_positive_class
 
     @staticmethod
     def _compute_calibrated_scores(
