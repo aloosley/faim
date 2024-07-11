@@ -1,6 +1,7 @@
 # ToDo: (WIP) Create an API that conforms to ML community standards
+from decimal import Decimal
 from functools import lru_cache
-from typing import Iterable, Protocol, Any, cast
+from typing import Iterable, Protocol, Any, cast, Optional
 from warnings import warn
 
 import numpy as np
@@ -88,9 +89,10 @@ class FAIM:
     def fit(
         self, y_scores: Iterable[float], y_groundtruth: Iterable[Any], *, sensitive_features: Iterable[Any]
     ) -> "FAIM":
-        y_scores, y_groundtruth, sensitive_features, y_scores_discretized = self._validate_and_format_inputs(
+        y_scores, y_groundtruth, sensitive_features = self._validate_and_format_inputs(
             y_scores, y_groundtruth, sensitive_features, score_discretization_step=self.score_discretization_step
         )
+        y_scores_discretized = self._discretize_scores(y_scores)
 
         # Compute sigma_a scores
         sigma_a_scores = self._compute_mu_a(y_scores_discretized, y_groundtruth, sensitive_features)
@@ -122,10 +124,23 @@ class FAIM:
     @property
     @lru_cache
     def normalized_discrete_score_values(self) -> NDArray[np.float64]:
-        return np.arange(0, 1 + self.score_discretization_step, self.score_discretization_step)
+        return self._get_normalized_discrete_score_values(score_discretization_step=self.score_discretization_step)
 
-    def _discretize_scores(self, scores: NDArray[np.float64]) -> NDArray[np.float64]:
-        return self.normalized_discrete_score_values[np.digitize(scores, self.normalized_discrete_score_values) - 1]
+    @staticmethod
+    def _get_normalized_discrete_score_values(score_discretization_step: float) -> NDArray[np.float64]:
+        return np.round(
+            np.arange(0, 1 + score_discretization_step, score_discretization_step),
+            decimals=int(np.ceil(-np.log10(score_discretization_step)) + 1),
+        )
+
+    def _discretize_scores(self, scores: NDArray[np.float64], step: Optional[float] = None) -> NDArray[np.float64]:
+        normalized_discrete_score_values: NDArray[np.float64]
+        if step is None:
+            normalized_discrete_score_values = self.normalized_discrete_score_values
+        else:
+            normalized_discrete_score_values = self._get_normalized_discrete_score_values(step)
+
+        return self.normalized_discrete_score_values[np.digitize(scores, normalized_discrete_score_values) - 1]
 
     def _compute_mu_a(
         self,
@@ -201,28 +216,34 @@ class FAIM:
     def _validate_and_format_inputs(
         self,
         y_scores: Iterable[float],
-        y_groundtruth: Iterable[Any],
+        y_groundtruth: Optional[Iterable[Any]],
         sensitive_features: Iterable[Any],
         score_discretization_step: float,
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    ) -> tuple[NDArray[np.float64], Optional[NDArray[np.float64]], NDArray[np.float64]]:
         y_scores = np.array(y_scores)
-        y_groundtruth = np.array(y_groundtruth, dtype=bool)
+        if y_groundtruth is not None:
+            y_groundtruth = np.array(y_groundtruth, dtype=bool)
         sensitive_features = np.array(sensitive_features)
 
-        if not 0 <= score_discretization_step <= 0.1:
+        if not 0 <= score_discretization_step <= 0.2:
             raise ValueError(
                 f"score_discretization_step must be between 0 and 0.1 ({score_discretization_step} passed), ."
             )
 
         if y_scores.max() > 1 or y_scores.min() < 0:
-            raise ValueError("y_scores must be between 0 and 1.")
+            raise ValueError(f"y_scores must be between 0 and 1 (min={y_scores.min()}, max={y_scores.max()}).")
 
-        if len(y_scores) != len(y_groundtruth) != len(sensitive_features):
-            raise ValueError("Length of y_scores, y_groundtruth, and sensitive_features must be equal.")
+        if len(y_scores) != len(sensitive_features):
+            raise ValueError(
+                f"Length of y_scores ({len(y_scores)}) and sensitive_features ({len(sensitive_features)}) must be equal."
+            )
 
-        y_scores_discretized = FAIM._discretize_scores(scores=y_scores, step=score_discretization_step)
+        if y_groundtruth is not None and len(y_groundtruth) != len(y_scores):
+            raise ValueError(
+                f"Length of y_groundtruth ({len(y_groundtruth)}) and y_scores ({len(y_scores)}) must be equal."
+            )
 
-        return y_scores, y_groundtruth, sensitive_features, y_scores_discretized
+        return y_scores, y_groundtruth, sensitive_features
 
 
 class FaimEstimator(BaseEstimator):
