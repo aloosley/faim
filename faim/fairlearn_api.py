@@ -77,7 +77,7 @@ class FAIM:
         elif isinstance(random_generator, int):
             random_generator = Generator(PCG64(random_generator))
 
-        self.thetas: NDArray[np.float64] = np.array(thetas)
+        self.thetas = thetas
         self.score_discretization_step = score_discretization_step
         self.optimal_transport_regularization = optimal_transport_regularization
 
@@ -106,16 +106,17 @@ class FAIM:
         # Map thetas to dict keyed by group
         sensitive_groups = np.unique(sensitive_features)
         thetas = deepcopy(self.thetas)
-        if isinstance(thetas, list):
+        if not isinstance(thetas, dict):
             thetas = {group: thetas for group in sensitive_groups}
 
         self.score_transport_maps_by_group: dict[Any, dict[float, float]] = {}
         for sensitive_group in sensitive_groups:
+            group_mus = np.stack((mu_a[sensitive_group], mu_b[sensitive_group], mu_c[sensitive_group]), axis=1)
             barycenter = ot.bregman.barycenter(
-                A=np.stack((mu_a[sensitive_group], mu_b[sensitive_group], mu_c[sensitive_group]), axis=1),
+                A=group_mus,
                 M=self._ot_loss_matrix,
                 reg=self.optimal_transport_regularization,
-                weights=self.thetas[sensitive_group],
+                weights=thetas[sensitive_group],
             )
 
             self.score_transport_maps_by_group[sensitive_group] = self.get_discrete_fair_score_map(

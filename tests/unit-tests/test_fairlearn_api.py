@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from pandas import Index
 from pandas._testing import assert_frame_equal
 
 from faim.fairlearn_api import FAIM
@@ -8,34 +7,43 @@ from faim.fairlearn_api import FAIM
 
 class TestFAIM:
     def test_fit(self) -> None:
-        # GIVEN
-        y_groundtruth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
-        y_scores = np.array([0.12, 0.25, 0.385, 0.452, 0.562, 0.612, 0.422, 0.151, 0.96, 0.242])
-        sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+        # GIVEN a FAIM instance
+        thetas = {0: [0, 0, 1], 1: [1, 0, 0]}
+        score_discretization_step = 0.05
 
-        faim = FAIM(thetas=[0, 0, 1], score_discretization_step=0.2)
+        faim = FAIM(thetas=thetas, score_discretization_step=score_discretization_step)
+
+        # GIVEN some data
+        synthetic_data_from_paper = pd.read_csv(
+            "https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12/dataset.csv"
+        )
+
+        y_scores = synthetic_data_from_paper.pred_score
+        y_scores = (y_scores - y_scores.min()) / (y_scores.max() - y_scores.min())
+        y_ground_truth = synthetic_data_from_paper.groundTruthLabel.astype(bool)
+        sensitive_features = synthetic_data_from_paper.group
 
         # WHEN
-        faim.fit(y_scores, y_groundtruth, sensitive_features=sensitive_features)
+        faim.fit(y_scores, y_ground_truth, sensitive_features=sensitive_features)
 
         # THEN
-        assert faim
+        assert isinstance(faim, FAIM)
 
     def test_compute_calibrated_scores(self) -> None:
         # GIVEN
-        y_groundtruth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
+        y_ground_truth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
 
         # WHEN
-        sigma_a = FAIM._compute_calibrated_scores(discrete_y_scores, y_groundtruth, sensitive_features)
+        sigma_a = FAIM._compute_calibrated_scores(discrete_y_scores, y_ground_truth, sensitive_features)
 
         # THEN
         assert np.array_equal(sigma_a, np.array([0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.0, 0.0]))
 
     def test_compute_mu_a(self) -> None:
         # GIVEN
-        y_groundtruth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
+        y_ground_truth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
         score_discretization_step = 0.2
@@ -43,7 +51,7 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # WHEN
-        mu_a = faim._compute_mu_a(discrete_y_scores, y_groundtruth, sensitive_features)
+        mu_a = faim._compute_mu_a(discrete_y_scores, y_ground_truth, sensitive_features)
 
         # THEN
         assert_frame_equal(
@@ -57,7 +65,7 @@ class TestFAIM:
 
     def test_compute_mu_b_and_c(self) -> None:
         # GIVEN
-        y_groundtruth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
+        y_ground_truth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
         score_discretization_step = 0.2
@@ -65,7 +73,7 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # WHEN
-        mu_b, mu_c = faim._compute_mu_b_and_c(discrete_y_scores, y_groundtruth, sensitive_features)
+        mu_b, mu_c = faim._compute_mu_b_and_c(discrete_y_scores, y_ground_truth, sensitive_features)
 
         # THEN
         assert_frame_equal(
@@ -77,7 +85,7 @@ class TestFAIM:
 
     def test_compute_sigma_minus_and_plus_by_sensitive_group(self) -> None:
         # GIVEN
-        y_groundtruth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
+        y_ground_truth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
         score_discretization_step = 0.2
@@ -86,7 +94,7 @@ class TestFAIM:
 
         # WHEN
         sigma_minus_and_plus_by_group = faim._compute_sigma_minus_and_plus_by_sensitive_group(
-            discrete_y_scores, y_groundtruth, sensitive_features
+            discrete_y_scores, y_ground_truth, sensitive_features
         )
 
         # THEN
@@ -107,7 +115,7 @@ class TestFAIM:
 
     def test_compute_sigma_bar_minus_and_plus(self) -> None:
         # GIVEN
-        y_groundtruth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
+        y_ground_truth = np.array([1, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.6, 0.2, 0.4, 0.6, 0.6, 0.8, 1.0, 0.6, 0.2, 0.2])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
         score_discretization_step = 0.2
@@ -116,7 +124,7 @@ class TestFAIM:
 
         # WHEN
         sigma_bar_minus, sigma_bar_plus = faim._compute_sigma_bar_minus_and_plus(
-            discrete_y_scores, y_groundtruth, sensitive_features
+            discrete_y_scores, y_ground_truth, sensitive_features
         )
 
         # THEN output has the right shape
