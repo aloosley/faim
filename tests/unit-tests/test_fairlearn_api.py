@@ -93,11 +93,11 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # WHEN
-        sigma_minus_and_plus_by_group = faim._compute_sigma_minus_and_plus_by_sensitive_group(
+        sigma_minus_and_plus_by_group, group_counts = faim._compute_sigma_minus_and_plus_by_sensitive_group(
             discrete_y_scores, y_ground_truth, sensitive_features
         )
 
-        # THEN
+        # THEN sigmas are correct
         assert np.array_equal(
             np.squeeze(sigma_minus_and_plus_by_group.loc[0, 0].to_numpy()), np.array([0, 1.0, 0, 0, 0])
         )
@@ -112,6 +112,9 @@ class TestFAIM:
         assert np.array_equal(
             np.squeeze(sigma_minus_and_plus_by_group.loc[1, 1].to_numpy()), np.array([0, 0, 0, 1.0, 0])
         )
+
+        # THEN group counts are correct
+        assert np.array_equal(np.squeeze(group_counts.to_numpy()), np.array([1, 3, 4, 2]))
 
     def test_compute_sigma_bar_minus_and_plus(self) -> None:
         # GIVEN

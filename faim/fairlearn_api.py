@@ -99,7 +99,7 @@ class FAIM:
         )
         y_scores_discretized = self._discretize_scores(y_scores)
 
-        # Compute mu_A (calibrated score distribution)
+        # Compute mu_t^A, mu_t^b, and mu_t^c (target score distributions for each fairness criterion)
         mu_a_per_group = self._compute_mu_a(y_scores_discretized, y_ground_truth, sensitive_features)
         mu_b_per_group, mu_c_per_group = self._compute_mu_b_and_c(
             y_scores_discretized, y_ground_truth, sensitive_features
@@ -160,11 +160,6 @@ class FAIM:
                         f"There must be 3 theta values for each group  but group {group_id} has "
                         f"{len(group_thetas)} theta values."
                     )
-
-    def get_faim_scores(self, scores: Iterable[float], group: Iterable[float]) -> NDArray[np.float64]:
-        if not self.is_fit:
-            raise NotFittedError()
-        ...
 
     @property
     @lru_cache
@@ -265,7 +260,7 @@ class FAIM:
         self, scores: NDArray[np.float64], fair_score_distribution: NDArray[np.float64]
     ) -> dict[float, float]:
         transport_map = ot.emd(
-            self._histogram(scores),
+            self._histogram(scores, normalize=True),
             fair_score_distribution,
             self._ot_loss_matrix,
         )
@@ -317,11 +312,11 @@ class FAIM:
         classes are balanced, respectively.
         """
         # Get score distributions for each group (known as sigma_t^[-+] in paper)
-        sigma_minus_and_plus_by_sensitive_group = self._compute_sigma_minus_and_plus_by_sensitive_group(
+        sigma_minus_and_plus_by_sensitive_group, group_counts = self._compute_sigma_minus_and_plus_by_sensitive_group(
             discrete_y_scores, y_ground_truth, sensitive_features
         )
-        sensitive_groups, sensitive_group_counts = np.unique(sensitive_features, return_counts=True)
-        group_weights = sensitive_group_counts / sum(sensitive_group_counts)
+
+        group_weights_by_class = group_counts.unstack() / group_counts.unstack().sum(axis=0)
 
         # Get idealized score distributions that balanced negative and positive classes for each group
         #  (sigma_bar^- and sigma_bar^+ in the paper, respectively)
@@ -329,13 +324,13 @@ class FAIM:
             A=sigma_minus_and_plus_by_sensitive_group.unstack("sensitive_group").loc[False].to_numpy(),
             M=self._ot_loss_matrix,
             reg=self.optimal_transport_regularization,
-            weights=group_weights,
+            weights=group_weights_by_class[False].to_numpy(),
         )
         balanced_score_distribution_for_positive_class = ot.bregman.barycenter(
             A=sigma_minus_and_plus_by_sensitive_group.unstack("sensitive_group").loc[True].to_numpy(),
             M=self._ot_loss_matrix,
             reg=self.optimal_transport_regularization,
-            weights=group_weights,
+            weights=group_weights_by_class[True].to_numpy(),
         )
 
         return balanced_score_distribution_for_negative_class, balanced_score_distribution_for_positive_class
@@ -345,7 +340,7 @@ class FAIM:
         discrete_y_scores: NDArray[np.float64],
         y_ground_truth: NDArray[np.float64],
         sensitive_features: NDArray[np.float64],
-    ):
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """Compute sigma_t^[-+] distributions from paper.
 
         These are the fraction of negative and positive class for each score value for each group.
@@ -371,6 +366,11 @@ class FAIM:
             .fillna(0)
         )
 
+        # Efficiently count sensitive groups associated with each class
+        group_counts = grouped_discretized_score_counts.unstack([0, 1]).sum()
+        group_counts.index = group_counts.index.droplevel()
+        group_counts.index.names = ["sensitive_group", "ground_truth"]
+
         # Normalized score counts
         for group in sensitive_groups:
             for ground_truth_value in ground_truth_values:
@@ -381,7 +381,7 @@ class FAIM:
 
         grouped_discretized_score_counts.index.names = ["sensitive_group", "ground_truth", "y_score"]
         grouped_discretized_score_counts.columns = ["fraction"]
-        return grouped_discretized_score_counts
+        return grouped_discretized_score_counts, group_counts
 
     def _histogram(self, scores: ArrayLike, normalize: bool = False) -> NDArray[np.float64]:
         hist = np.histogram(
