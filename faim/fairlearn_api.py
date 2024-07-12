@@ -66,7 +66,7 @@ class FAIM:
         thetas: list[float] | dict[Any, list[float]],
         score_discretization_step: float = 0.01,
         score_transport_maps_by_group: dict[Any, NDArray[np.float64]] | None = None,
-        optimal_transport_regularization: float = 0.01,
+        optimal_transport_regularization: float = 0.001,
         random_generator: Generator | int | None = None,
     ) -> None:
         # Validate and set FAIM parameters
