@@ -9,7 +9,7 @@ class TestFAIM:
     def test_fit(self) -> None:
         # GIVEN a FAIM instance
         thetas = {0: [0, 0, 1], 1: [1, 0, 0]}
-        score_discretization_step = 0.05
+        score_discretization_step = 0.007194244604316547  # Step value in Meike's original code after normalizing data
 
         faim = FAIM(thetas=thetas, score_discretization_step=score_discretization_step)
 

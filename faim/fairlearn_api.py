@@ -100,8 +100,10 @@ class FAIM:
         y_scores_discretized = self._discretize_scores(y_scores)
 
         # Compute mu_A (calibrated score distribution)
-        mu_a = self._compute_mu_a(y_scores_discretized, y_ground_truth, sensitive_features)
-        mu_b, mu_c = self._compute_mu_b_and_c(y_scores_discretized, y_ground_truth, sensitive_features)
+        mu_a_per_group = self._compute_mu_a(y_scores_discretized, y_ground_truth, sensitive_features)
+        mu_b_per_group, mu_c_per_group = self._compute_mu_b_and_c(
+            y_scores_discretized, y_ground_truth, sensitive_features
+        )
 
         # Map thetas to dict keyed by group
         sensitive_groups = np.unique(sensitive_features)
@@ -111,7 +113,10 @@ class FAIM:
 
         self.score_transport_maps_by_group: dict[Any, dict[float, float]] = {}
         for sensitive_group in sensitive_groups:
-            group_mus = np.stack((mu_a[sensitive_group], mu_b[sensitive_group], mu_c[sensitive_group]), axis=1)
+            group_mus = np.stack(
+                (mu_a_per_group[sensitive_group], mu_b_per_group[sensitive_group], mu_c_per_group[sensitive_group]),
+                axis=1,
+            )
             barycenter = ot.bregman.barycenter(
                 A=group_mus,
                 M=self._ot_loss_matrix,
@@ -173,10 +178,10 @@ class FAIM:
         return loss_matrix / loss_matrix.max()
 
     @staticmethod
-    def _get_discrete_score_values(score_discretization_step: float) -> NDArray[np.float64]:
+    def _get_discrete_score_values(score_discretization_step: float, max_precision: int = 8) -> NDArray[np.float64]:
         return np.round(
             np.arange(0, 1, score_discretization_step),
-            decimals=int(np.ceil(-np.log10(score_discretization_step)) + 1),
+            decimals=min(int(np.ceil(-np.log10(score_discretization_step)) + 2), max_precision),
         )
 
     def _discretize_scores(self, scores: NDArray[np.float64], step: Optional[float] = None) -> NDArray[np.float64]:
@@ -244,7 +249,6 @@ class FAIM:
                         discrete_fair_score_map[score]
                         for score in discrete_y_scores[y_ground_truth == ground_truth_value]
                     ],
-                    normalize=True,
                 )
 
             mu_dfs.append(
@@ -255,13 +259,13 @@ class FAIM:
             )
 
         assert len(mu_dfs) == 2
-        return tuple(mu_dfs)
+        return cast(tuple[pd.DataFrame, pd.DataFrame], tuple(mu_dfs))
 
     def get_discrete_fair_score_map(
         self, scores: NDArray[np.float64], fair_score_distribution: NDArray[np.float64]
     ) -> dict[float, float]:
         transport_map = ot.emd(
-            self._histogram(scores, normalize=True),
+            self._histogram(scores),
             fair_score_distribution,
             self._ot_loss_matrix,
         )
