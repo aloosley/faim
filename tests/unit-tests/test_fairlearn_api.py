@@ -9,7 +9,7 @@ class TestFAIM:
     def test_fit(self) -> None:
         # GIVEN a FAIM instance
         thetas = {0: [0, 0, 1], 1: [1, 0, 0]}
-        score_discretization_step = 0.007194244604316547  # Step value in Meike's original code after normalizing data
+        score_discretization_step = 0.007194244604316547  # Step value in original code after normalizing data
 
         faim = FAIM(thetas=thetas, score_discretization_step=score_discretization_step)
 
@@ -67,20 +67,26 @@ class TestFAIM:
         # GIVEN
         y_ground_truth = np.array([1, 0, 1, 0, 1, 0, 1, 0, 0, 0], dtype=bool)
         discrete_y_scores = np.array([0.2, 0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2, 0.2])
+        discrete_y_score_indices = np.array([1, 1, 2, 3, 3, 3, 3, 3, 1, 1])
         sensitive_features = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
         score_discretization_step = 0.2
 
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # WHEN
-        mu_b, mu_c = faim._compute_mu_b_and_c(discrete_y_scores, y_ground_truth, sensitive_features)
+        mu_b, mu_c = faim._compute_mu_b_and_c(
+            discrete_y_scores=discrete_y_scores,
+            discrete_y_score_indices=discrete_y_score_indices,
+            y_ground_truth=y_ground_truth,
+            sensitive_features=sensitive_features,
+        )
 
         # THEN
         assert_frame_equal(
-            mu_b, pd.DataFrame(data={0: [0, 0.5, 0, 0.5, 0], 1: [0, 0.5, 0, 0.5, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
+            mu_b, pd.DataFrame(data={0: [1, 4, 0, 5, 0], 1: [1, 4, 0, 5, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
         )
         assert_frame_equal(
-            mu_c, pd.DataFrame(data={0: [0.5, 0.25, 0.25, 0, 0], 1: [0.5, 0, 0.5, 0, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
+            mu_c, pd.DataFrame(data={0: [5, 0, 5, 0, 0], 1: [5, 0, 5, 0, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
         )
 
     def test_compute_sigma_minus_and_plus_by_sensitive_group(self) -> None:
@@ -146,11 +152,11 @@ class TestFAIM:
         # THEN fixed value expected
         np.testing.assert_array_almost_equal(
             sigma_bar_minus,
-            np.array([9.633956e-04, 4.990513e-01, 2.711831e-01, 2.288006e-01, 1.592632e-06]),
+            np.array([3.593892e-28, 5.000001e-01, 2.500000e-01, 2.499999e-01, 1.795358e-47]),
         )
         np.testing.assert_array_almost_equal(
             sigma_bar_plus,
-            np.array([1.019634e-17, 7.341867e-07, 1.970870e-01, 8.014763e-01, 1.435954e-03]),
+            np.array([4.596714e-164, 1.722138e-055, 3.333329e-001, 6.666671e-001, 4.791857e-028]),
         )
 
     def test_normalized_discrete_score_values(self) -> None:
@@ -171,7 +177,8 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=step)
 
         # WHEN
-        discretized_y_scores = faim._discretize_scores(y_scores)
+        discretized_y_scores, discretized_y_score_indices = faim._discretize_scores(y_scores)
 
         # THEN
         assert np.array_equal(discretized_y_scores, np.array([0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 0.5, 0.5]))
+        assert np.array_equal(discretized_y_score_indices, np.array([0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1]))
