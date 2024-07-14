@@ -122,7 +122,7 @@ class FAIM:
                 axis=1,
             )
             barycenter = ot.bregman.barycenter(
-                A=group_mus,
+                A=np.divide(group_mus, group_mus.sum(axis=0)),
                 M=self._ot_loss_matrix,
                 reg=self.optimal_transport_regularization,
                 weights=thetas[sensitive_group],
