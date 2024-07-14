@@ -121,16 +121,18 @@ class FAIM:
                 (mu_a_per_group[sensitive_group], mu_b_per_group[sensitive_group], mu_c_per_group[sensitive_group]),
                 axis=1,
             )
-            barycenter = ot.bregman.barycenter(
+            faim_barycenter = ot.bregman.barycenter(
                 A=np.divide(group_mus, group_mus.sum(axis=0)),
                 M=self._ot_loss_matrix,
                 reg=self.optimal_transport_regularization,
                 weights=thetas[sensitive_group],
             )
 
-            self.discrete_fair_scores_by_group[sensitive_group] = self.get_discrete_fair_score_map(
-                discrete_scores=discrete_y_scores,
-                fair_score_distribution=barycenter,
+            self.discrete_fair_scores_by_group[sensitive_group] = self._fill_discrete_fair_score_map(
+                self.get_discrete_fair_score_map(
+                    discrete_scores=discrete_y_scores,
+                    fair_score_distribution=faim_barycenter,
+                )
             )
 
     def predict(self, y_scores: Iterable[Any], *, sensitive_features: Iterable[Any]) -> NDArray[np.float64]:
@@ -243,6 +245,7 @@ class FAIM:
                     fair_score_distribution=sigma_bar,
                 )
                 discrete_fair_scores = discrete_fair_score_map[discrete_y_score_indices[mask]]
+                assert not np.isnan(discrete_fair_scores.sum())
 
                 mus[ground_truth_value][sensitive_group] = self._histogram(discrete_fair_scores)
 
@@ -271,6 +274,7 @@ class FAIM:
         row_sums = transport_map.sum(
             axis=1
         )  # Fraction each score value to be transported to all fair discretized_scores
+        row_sums[row_sums == 0] = np.nan
         inverse_norm_vec = np.reciprocal(row_sums, where=row_sums != 0)
         norm_matrix = np.diag(inverse_norm_vec)
         normalized_transport_map = np.matmul(norm_matrix, transport_map)
@@ -394,6 +398,29 @@ class FAIM:
         if normalize:
             return hist / len(scores)
         return hist
+
+    def _fill_discrete_fair_score_map(self, discrete_fair_score_map: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Fill nan's in discrete fair score map.
+
+        The discrete fair score map maps scores that have been discretized from 0 to 1
+        (via the function self._get_discrete_score_values).
+
+        When fitting FAIM, if a particular score is never seen, optimal transport will not know how to map it,
+        leaving a nan-value in the discrete fair score map.  This function fills in the nans by linearly interpolating.
+        If the start and/or end of the score map is nan, then it is assigned to be 0 and/or 1, respectively.
+        """
+
+        # Handle beginning and end
+        is_nan = np.isnan(discrete_fair_score_map)
+        if is_nan[0]:
+            discrete_fair_score_map[0] = 0
+        if is_nan[-1]:
+            discrete_fair_score_map[-1] = 1 - self.score_discretization_step
+
+        # Fill in remaining nans
+        is_nan = np.isnan(discrete_fair_score_map)
+        indices = np.arange(len(discrete_fair_score_map))
+        return np.interp(indices, indices[~is_nan], discrete_fair_score_map[~is_nan])
 
     def _validate_and_format_inputs(
         self,

@@ -28,6 +28,21 @@ class TestFAIM:
 
         # THEN
         assert isinstance(faim, FAIM)
+        assert isinstance(faim.discrete_fair_scores_by_group, dict)
+        np.testing.assert_array_almost_equal(
+            faim.discrete_fair_scores_by_group[0][:5], np.array([0.333111, 0.338481, 0.343851, 0.349222, 0.354592])
+        )
+        np.testing.assert_array_almost_equal(
+            faim.discrete_fair_scores_by_group[0][-5:],
+            np.array([0.82734, 0.83122597, 0.83812917, 0.84419487, 0.85026057]),
+        )
+        np.testing.assert_array_almost_equal(
+            faim.discrete_fair_scores_by_group[1][:5], np.array([0.040875, 0.042148, 0.043421, 0.044694, 0.045967])
+        )
+        np.testing.assert_array_almost_equal(
+            faim.discrete_fair_scores_by_group[1][-5:],
+            np.array([0.9299756, 0.93525, 0.93820437, 0.94205291, 0.94590145]),
+        )
 
     def test_compute_calibrated_scores(self) -> None:
         # GIVEN
@@ -83,10 +98,10 @@ class TestFAIM:
 
         # THEN
         assert_frame_equal(
-            mu_b, pd.DataFrame(data={0: [1, 4, 0, 5, 0], 1: [1, 4, 0, 5, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
+            mu_b, pd.DataFrame(data={0: [0, 1, 0, 1, 0], 1: [0, 2, 0, 2, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
         )
         assert_frame_equal(
-            mu_c, pd.DataFrame(data={0: [5, 0, 5, 0, 0], 1: [5, 0, 5, 0, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
+            mu_c, pd.DataFrame(data={0: [0, 0, 2, 0, 0], 1: [0, 0, 2, 0, 0]}, index=[0, 0.2, 0.4, 0.6, 0.8])
         )
 
     def test_compute_sigma_minus_and_plus_by_sensitive_group(self) -> None:
@@ -182,3 +197,16 @@ class TestFAIM:
         # THEN
         assert np.array_equal(discretized_y_scores, np.array([0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 0.5, 0.5]))
         assert np.array_equal(discretized_y_score_indices, np.array([0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1]))
+
+    def test_fill_discrete_fair_score_map(self) -> None:
+        # GIVEN
+        score_map = np.array([np.nan, 0.1, 0.4, 0.6, 0.6, np.nan, 0.7, 0.8, 0.9, np.nan])
+        faim = FAIM(thetas=[0, 0, 1], score_discretization_step=0.01)
+
+        # WHEN
+        interpolated_score_map = faim._fill_discrete_fair_score_map(score_map)
+
+        # THEN
+        np.testing.assert_array_almost_equal(
+            interpolated_score_map, np.array([0.0, 0.1, 0.4, 0.6, 0.6, 0.65, 0.7, 0.8, 0.9, 0.99])
+        )
