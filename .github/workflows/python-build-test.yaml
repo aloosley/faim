@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-20.04]
+        os: [windows, linux]
         python: [3.9.19, 3.12.4]
     steps:
     - name: Checkout
