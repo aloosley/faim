@@ -152,7 +152,7 @@ class TestFAIM:
         )
 
         # THEN output has the right shape
-        assert len(sigma_bar_minus) == len(sigma_bar_plus) == len(faim.normalized_discrete_score_values)
+        assert len(sigma_bar_minus) == len(sigma_bar_plus) == len(faim.discrete_score_bins)
 
         # THEN distributions are (almost) normalized
         np.testing.assert_approx_equal(sigma_bar_minus.sum(), sigma_bar_plus.sum())
@@ -174,7 +174,7 @@ class TestFAIM:
             np.array([4.596714e-164, 1.722138e-055, 3.333329e-001, 6.666671e-001, 4.791857e-028]),
         )
 
-    def test_normalized_discrete_score_values(self) -> None:
+    def test_discrete_score_bins(self) -> None:
         # GIVEN
         score_discretization_step = 0.2
 
@@ -182,7 +182,7 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=score_discretization_step)
 
         # THEN
-        assert np.array_equal(faim.normalized_discrete_score_values, np.array([0.0, 0.2, 0.4, 0.6, 0.8]))
+        assert np.array_equal(faim.discrete_score_bins, np.array([0.0, 0.2, 0.4, 0.6, 0.8]))
 
     def test_discretize_scores(self) -> None:
         # GIVEN
@@ -192,7 +192,7 @@ class TestFAIM:
         faim = FAIM(thetas=[0, 0, 1], score_discretization_step=step)
 
         # WHEN
-        discretized_y_scores, discretized_y_score_indices = faim._discretize_scores(y_scores)
+        discretized_y_scores, discretized_y_score_indices = faim._get_discrete_scores_and_indices(y_scores)
 
         # THEN
         assert np.array_equal(discretized_y_scores, np.array([0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0, 0, 0.5, 0.5, 0.5]))

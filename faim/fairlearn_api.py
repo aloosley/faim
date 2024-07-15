@@ -1,6 +1,5 @@
 # ToDo: (WIP) Create an API that conforms to ML community standards
 from copy import deepcopy
-from decimal import Decimal
 from functools import lru_cache
 from typing import Iterable, Protocol, Any, cast, Optional
 from warnings import warn
@@ -58,7 +57,10 @@ class FAIM:
 
     Examples
     --------
-
+    >>> from faim.fairlearn_api import FAIM
+    >>> faim = FAIM(thetas=[0.5, 0.25, 0.25], score_discretization_step=0.01)
+    >>> faim.fit(y_scores, y_ground_truth, sensitive_features)
+    >>> fair_y_scores = faim.predict(y_scores, sensitive_features)
 
     """
 
@@ -98,7 +100,7 @@ class FAIM:
         y_scores, y_ground_truth, sensitive_features = self._validate_and_format_inputs(
             y_scores, y_ground_truth, sensitive_features, score_discretization_step=self.score_discretization_step
         )
-        discrete_y_scores, discrete_y_score_indices = self._discretize_scores(y_scores)
+        discrete_y_scores, discrete_y_score_indices = self._get_discrete_scores_and_indices(y_scores)
 
         # Compute mu_t^A, mu_t^b, and mu_t^c (target score distributions for each fairness criterion)
         mu_a_per_group = self._compute_mu_a(discrete_y_scores, y_ground_truth, sensitive_features)
@@ -129,8 +131,8 @@ class FAIM:
             )
 
             self.discrete_fair_scores_by_group[sensitive_group] = self._fill_discrete_fair_score_map(
-                self.get_discrete_fair_score_map(
-                    discrete_scores=discrete_y_scores,
+                self._get_discrete_fair_score_map(
+                    scores=y_scores,
                     fair_score_distribution=faim_barycenter,
                 )
             )
@@ -139,7 +141,7 @@ class FAIM:
         y_scores, y_ground_truth, sensitive_features = self._validate_and_format_inputs(
             y_scores, None, sensitive_features, score_discretization_step=self.score_discretization_step
         )
-        discretized_y_scores, discretized_y_score_indices = self._discretize_scores(y_scores)
+        discretized_y_scores, discretized_y_score_indices = self._get_discrete_scores_and_indices(y_scores)
 
         # Map scores to fair scores
         discretized_fair_y_scores = deepcopy(discretized_y_scores)
@@ -151,49 +153,36 @@ class FAIM:
 
         return discretized_fair_y_scores
 
-    @staticmethod
-    def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
-        if isinstance(thetas, list) and len(thetas) != 3:
-            raise ValueError(
-                "`thetas` must have three values if provided as a list. The three values will be applied to each group."
-            )
-        if isinstance(thetas, dict):
-            for group_id, group_thetas in thetas.items():
-                if len(group_thetas) != 3:
-                    raise ValueError(
-                        f"There must be 3 theta values for each group  but group {group_id} has "
-                        f"{len(group_thetas)} theta values."
-                    )
-
     @property
     @lru_cache
-    def normalized_discrete_score_values(self) -> NDArray[np.float64]:
-        return self._get_discrete_score_values(score_discretization_step=self.score_discretization_step)
+    def discrete_score_bins(self) -> NDArray[np.float64]:
+        return self._get_discrete_score_bins(score_discretization_step=self.score_discretization_step)
 
     @property
     @lru_cache
     def _ot_loss_matrix(self) -> NDArray[np.float64]:
-        loss_matrix = ot.utils.dist0(len(self.normalized_discrete_score_values))
+        loss_matrix = ot.utils.dist0(len(self.discrete_score_bins))
         return loss_matrix / loss_matrix.max()
 
+    def _get_discrete_scores_and_indices(
+        self, scores: NDArray[np.float64], step: Optional[float] = None
+    ) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
+        """Discretize scores based on discrete_score_bins."""
+        discrete_score_bins: NDArray[np.float64]
+        if step is None:
+            discrete_score_bins = self.discrete_score_bins
+        else:
+            discrete_score_bins = self._get_discrete_score_bins(step)
+
+        discretized_score_indices = np.digitize(scores, discrete_score_bins) - 1
+        return self.discrete_score_bins[discretized_score_indices], discretized_score_indices
+
     @staticmethod
-    def _get_discrete_score_values(score_discretization_step: float, max_precision: int = 8) -> NDArray[np.float64]:
+    def _get_discrete_score_bins(score_discretization_step: float, max_precision: int = 8) -> NDArray[np.float64]:
         return np.round(
             np.arange(0, 1, score_discretization_step),
             decimals=min(int(np.ceil(-np.log10(score_discretization_step)) + 2), max_precision),
         )
-
-    def _discretize_scores(
-        self, scores: NDArray[np.float64], step: Optional[float] = None
-    ) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
-        normalized_discrete_score_values: NDArray[np.float64]
-        if step is None:
-            normalized_discrete_score_values = self.normalized_discrete_score_values
-        else:
-            normalized_discrete_score_values = self._get_discrete_score_values(step)
-
-        discretized_score_indices = np.digitize(scores, normalized_discrete_score_values) - 1
-        return self.normalized_discrete_score_values[discretized_score_indices], discretized_score_indices
 
     def _compute_mu_a(
         self,
@@ -214,7 +203,7 @@ class FAIM:
                 sensitive_feature: self._histogram(calibrated_scores[sensitive_features == sensitive_feature])
                 for sensitive_feature in np.unique(sensitive_features)
             },
-            index=self.normalized_discrete_score_values,
+            index=self.discrete_score_bins,
         )
 
     def _compute_mu_b_and_c(
@@ -240,8 +229,8 @@ class FAIM:
             mus[ground_truth_value] = {}
             for sensitive_group in np.unique(sensitive_features):
                 mask = (y_ground_truth == ground_truth_value) & (sensitive_features == sensitive_group)
-                discrete_fair_score_map = self.get_discrete_fair_score_map(
-                    discrete_scores=discrete_y_scores[mask],
+                discrete_fair_score_map = self._get_discrete_fair_score_map(
+                    scores=discrete_y_scores[mask],
                     fair_score_distribution=sigma_bar,
                 )
                 discrete_fair_scores = discrete_fair_score_map[discrete_y_score_indices[mask]]
@@ -252,35 +241,12 @@ class FAIM:
             mu_dfs.append(
                 pd.DataFrame(
                     data={sensitive_group: mu for sensitive_group, mu in mus[ground_truth_value].items()},
-                    index=self.normalized_discrete_score_values,
+                    index=self.discrete_score_bins,
                 )
             )
 
         assert len(mu_dfs) == 2
         return cast(tuple[pd.DataFrame, pd.DataFrame], tuple(mu_dfs))
-
-    def get_discrete_fair_score_map(
-        self, discrete_scores: NDArray[np.float64], fair_score_distribution: NDArray[np.float64]
-    ) -> NDArray[np.float64]:
-        # Calculate transport map from discretized_scores to fair score distribution via Earth Movers Distance calculation
-        #  ToDo: Consider using a more efficient OT solver like Sinkhorn
-        transport_map = ot.emd(
-            self._histogram(discrete_scores, normalize=True),
-            fair_score_distribution,
-            self._ot_loss_matrix,
-        )
-
-        # Normalize each row of transport ignoring rows that sum to 0
-        row_sums = transport_map.sum(
-            axis=1
-        )  # Fraction each score value to be transported to all fair discretized_scores
-        row_sums[row_sums == 0] = np.nan
-        inverse_norm_vec = np.reciprocal(row_sums, where=row_sums != 0)
-        norm_matrix = np.diag(inverse_norm_vec)
-        normalized_transport_map = np.matmul(norm_matrix, transport_map)
-
-        # Average resulting fair score after mapping (array aligns with input discretized_scores)
-        return np.matmul(normalized_transport_map, self.normalized_discrete_score_values.T)
 
     @staticmethod
     def _compute_calibrated_scores(
@@ -362,7 +328,7 @@ class FAIM:
         sensitive_groups = np.unique(sensitive_features)
         ground_truth_values = np.unique(y_ground_truth)
         cartesion_product_of_index_features_with_discrete_score_basis = pd.MultiIndex.from_product(
-            [sensitive_groups, ground_truth_values, self.normalized_discrete_score_values]
+            [sensitive_groups, ground_truth_values, self.discrete_score_bins]
         )
         grouped_discretized_score_counts = (
             data.groupby(["sensitive_features", "y_ground_truth", "discrete_y_scores"], sort=True)
@@ -391,13 +357,57 @@ class FAIM:
     def _histogram(self, scores: ArrayLike, normalize: bool = False) -> NDArray[np.float64]:
         hist = np.histogram(
             scores,
-            bins=np.append(self.normalized_discrete_score_values, 1),
+            bins=np.append(self.discrete_score_bins, 1),
             density=False,
         )[0]
 
         if normalize:
             return hist / len(scores)
         return hist
+
+    def _get_discrete_fair_score_map(
+        self, scores: NDArray[np.float64], fair_score_distribution: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
+        """Convert scores and desired fair score distribution into a discrete fair score map.
+
+        The discrete fair score map returned by this method is an array the size of self.discrete_score_bins
+        that maps those discrete scores to fair scores based on the set of fairness criteria encoded by the
+        desired "fair" score distribution.
+
+        Parameters
+        ----------
+        scores:
+            Scores to be mapped via Earth movers distance to fair scores
+        fair_score_distribution:
+            Desired fair score distribution
+
+        Returns
+        -------
+        NDArray[np.float64]
+            Discrete fair score map - an array the size of self.discrete_score_bins that maps discrete scores to
+            fair scores
+
+
+        """
+        # Calculate transport map from discretized_scores to fair score distribution via Earth Movers Distance calculation
+        #  ToDo: Consider using a more efficient OT solver like Sinkhorn
+        transport_map = ot.emd(
+            self._histogram(scores, normalize=True),
+            fair_score_distribution,
+            self._ot_loss_matrix,
+        )
+
+        # Normalize each row of transport ignoring rows that sum to 0
+        row_sums = transport_map.sum(
+            axis=1
+        )  # Fraction each score value to be transported to all fair discretized_scores
+        row_sums[row_sums == 0] = np.nan
+        inverse_norm_vec = np.reciprocal(row_sums, where=row_sums != 0)
+        norm_matrix = np.diag(inverse_norm_vec)
+        normalized_transport_map = np.matmul(norm_matrix, transport_map)
+
+        # Average resulting fair score after mapping (array aligns with input discretized_scores)
+        return np.matmul(normalized_transport_map, self.discrete_score_bins.T)
 
     def _fill_discrete_fair_score_map(self, discrete_fair_score_map: NDArray[np.float64]) -> NDArray[np.float64]:
         """Fill nan's in discrete fair score map.
@@ -421,6 +431,20 @@ class FAIM:
         is_nan = np.isnan(discrete_fair_score_map)
         indices = np.arange(len(discrete_fair_score_map))
         return np.interp(indices, indices[~is_nan], discrete_fair_score_map[~is_nan])
+
+    @staticmethod
+    def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
+        if isinstance(thetas, list) and len(thetas) != 3:
+            raise ValueError(
+                "`thetas` must have three values if provided as a list. The three values will be applied to each group."
+            )
+        if isinstance(thetas, dict):
+            for group_id, group_thetas in thetas.items():
+                if len(group_thetas) != 3:
+                    raise ValueError(
+                        f"There must be 3 theta values for each group  but group {group_id} has "
+                        f"{len(group_thetas)} theta values."
+                    )
 
     def _validate_and_format_inputs(
         self,
