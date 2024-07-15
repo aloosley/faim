@@ -434,17 +434,31 @@ class FAIM:
 
     @staticmethod
     def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
-        if isinstance(thetas, list) and len(thetas) != 3:
-            raise ValueError(
-                "`thetas` must have three values if provided as a list. The three values will be applied to each group."
-            )
+        if isinstance(thetas, list):
+            if len(thetas) != 3:
+                raise ValueError(
+                    "`thetas` must have three values if provided as a list. The three values will be applied to each group."
+                )
+            return FAIM._validate_group_thetas_sum_to_one(thetas)
+
         if isinstance(thetas, dict):
             for group_id, group_thetas in thetas.items():
                 if len(group_thetas) != 3:
                     raise ValueError(
-                        f"There must be 3 theta values for each group  but group {group_id} has "
+                        f"There must be 3 theta values for each group but group {group_id} has "
                         f"{len(group_thetas)} theta values."
                     )
+
+                return FAIM._validate_group_thetas_sum_to_one(group_thetas)
+
+        raise TypeError(f"`thetas` must be either a list or a dictionary ({type(thetas)} provided).")
+
+    @staticmethod
+    def _validate_group_thetas_sum_to_one(group_thetas: Iterable[float]) -> None:
+        if sum(group_thetas) != 1:
+            raise ValueError(
+                f"Thetas must sum to 1 (group_thetas={group_thetas} sum to {sum(group_thetas):.5f}) - consider using fractions like `1/3` instead of float"
+            )
 
     def _validate_and_format_inputs(
         self,
