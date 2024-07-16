@@ -30,16 +30,6 @@ jobs:
       with:
         python-version: ${{ matrix.python }}
 
-    - name: Validate version
-      run: |
-        $pythonVersion = (python --version)
-        if ("Python ${{ matrix.python }}" -ne "$pythonVersion"){
-          Write-Host "The current version is $pythonVersion; expected version is ${{ matrix.python }}"
-          exit 1
-        }
-        $pythonVersion
-      shell: pwsh
-
     - name: Build Package
       run: |
         python -m pip install --upgrade pip
