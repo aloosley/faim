@@ -24,30 +24,35 @@ class TestFAIM:
         sensitive_features = synthetic_data_from_paper.group
 
         # WHEN
-        faim.fit(y_scores, y_ground_truth, sensitive_features=sensitive_features)
+        faim = faim.fit(y_scores, y_ground_truth, sensitive_features=sensitive_features)
 
-        # THEN
+        # THEN FAIM type is returned
         assert isinstance(faim, FAIM)
+
+        # THEN the score maps are roughly equal
+        #  (the underlying EMD calculation seems to vary from platform to platform so check modes match up and scores
+        #   are roughly equal)
         assert isinstance(faim.discrete_fair_scores_by_group, dict)
-        np.testing.assert_array_almost_equal(
+        rtol = 1e-3
+        assert np.allclose(
             faim.discrete_fair_scores_by_group[0][:5],
             np.array([0.333111, 0.338481, 0.343851, 0.349222, 0.354592]),
-            decimal=5,
+            rtol=rtol,
         )
-        np.testing.assert_array_almost_equal(
+        assert np.allclose(
             faim.discrete_fair_scores_by_group[0][-5:],
             np.array([0.82734, 0.83122597, 0.83812917, 0.84419487, 0.85026057]),
-            decimal=5,
+            rtol=rtol,
         )
-        np.testing.assert_array_almost_equal(
+        assert np.allclose(
             faim.discrete_fair_scores_by_group[1][:5],
             np.array([0.040875, 0.042148, 0.043421, 0.044694, 0.045967]),
-            decimal=5,
+            rtol=rtol,
         )
-        np.testing.assert_array_almost_equal(
+        assert np.allclose(
             faim.discrete_fair_scores_by_group[1][-5:],
             np.array([0.9299756, 0.93525, 0.93820437, 0.94205291, 0.94590145]),
-            decimal=5,
+            rtol=rtol,
         )
 
     def test_compute_calibrated_scores(self) -> None:
@@ -128,10 +133,9 @@ class TestFAIM:
         assert np.array_equal(
             np.squeeze(sigma_minus_and_plus_by_group.loc[0, 0].to_numpy()), np.array([0, 1.0, 0, 0, 0])
         )
-        np.testing.assert_array_almost_equal(
+        assert np.array_equal(
             np.squeeze(sigma_minus_and_plus_by_group.loc[0, 1].to_numpy()),
-            np.array([0, 0.33, 0.33, 0.33, 0]),
-            decimal=2,
+            np.array([0, 1 / 3, 1 / 3, 1 / 3, 0]),
         )
         assert np.array_equal(
             np.squeeze(sigma_minus_and_plus_by_group.loc[1, 0].to_numpy()), np.array([0, 0.5, 0, 0.5, 0])
@@ -171,11 +175,11 @@ class TestFAIM:
         ).sum()
 
         # THEN fixed value expected
-        np.testing.assert_array_almost_equal(
+        assert np.allclose(
             sigma_bar_minus,
             np.array([3.593892e-28, 5.000001e-01, 2.500000e-01, 2.499999e-01, 1.795358e-47]),
         )
-        np.testing.assert_array_almost_equal(
+        assert np.allclose(
             sigma_bar_plus,
             np.array([4.596714e-164, 1.722138e-055, 3.333329e-001, 6.666671e-001, 4.791857e-028]),
         )
@@ -213,6 +217,4 @@ class TestFAIM:
         interpolated_score_map = faim._fill_discrete_fair_score_map(score_map)
 
         # THEN
-        np.testing.assert_array_almost_equal(
-            interpolated_score_map, np.array([0.0, 0.1, 0.4, 0.6, 0.6, 0.65, 0.7, 0.8, 0.9, 0.99])
-        )
+        assert np.allclose(interpolated_score_map, np.array([0.0, 0.1, 0.4, 0.6, 0.6, 0.65, 0.7, 0.8, 0.9, 0.99]))

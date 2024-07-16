@@ -137,6 +137,8 @@ class FAIM:
                 )
             )
 
+        return self
+
     def predict(self, y_scores: Iterable[Any], *, sensitive_features: Iterable[Any]) -> NDArray[np.float64]:
         y_scores, y_ground_truth, sensitive_features = self._validate_and_format_inputs(
             y_scores, None, sensitive_features, score_discretization_step=self.score_discretization_step
