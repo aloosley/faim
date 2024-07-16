@@ -1,7 +1,7 @@
 # ToDo: (WIP) Create an API that conforms to ML community standards
 from copy import deepcopy
 from functools import lru_cache
-from typing import Iterable, Protocol, Any, cast, Optional
+from typing import Iterable, Protocol, Any, cast, Optional, Union
 from warnings import warn
 
 import numpy as np
@@ -66,11 +66,11 @@ class FAIM:
 
     def __init__(
         self,
-        thetas: list[float] | dict[Any, list[float]],
+        thetas: Union[list[float], dict[Any, list[float]]],
         score_discretization_step: float = 0.01,
-        discrete_fair_scores_by_group: NDArray[np.float64] | None = None,
+        discrete_fair_scores_by_group: Union[NDArray[np.float64], None] = None,
         optimal_transport_regularization: float = 0.001,
-        random_generator: Generator | int | None = None,
+        random_generator: Union[Generator, int, None] = None,
     ) -> None:
         # Validate and set FAIM parameters
         self._validate_thetas(thetas)
@@ -433,7 +433,7 @@ class FAIM:
         return np.interp(indices, indices[~is_nan], discrete_fair_score_map[~is_nan])
 
     @staticmethod
-    def _validate_thetas(thetas: list[float] | dict[Any, list[float]]) -> None:
+    def _validate_thetas(thetas: Union[list[float], dict[Any, list[float]]]) -> None:
         if isinstance(thetas, list):
             if len(thetas) != 3:
                 raise ValueError(
