@@ -35,8 +35,8 @@ class TestFAIM:
         rtol_score_elements = 1e-3
         rtol_mean_score = rtol_score_elements / np.sqrt(len(faim.discrete_fair_score_map_by_group[0]))
 
-        assert np.isclose(faim.discrete_fair_score_map_by_group[0].mean(), 0.61148966, rtol=rtol_mean_score)
-        assert np.isclose(faim.discrete_fair_score_map_by_group[1].mean(), 0.30627379, rtol=rtol_mean_score)
+        assert np.isclose(faim.discrete_fair_score_map_by_group[0].mean(), 0.6115, rtol=rtol_mean_score)
+        assert np.isclose(faim.discrete_fair_score_map_by_group[1].mean(), 0.3063, rtol=rtol_mean_score)
 
         assert np.allclose(
             faim.discrete_fair_score_map_by_group[0][:5],
