@@ -89,7 +89,7 @@ class FAIM:
             self.prefit = False
         else:
             self.prefit = True
-        self.discrete_fair_scores_by_group = discrete_fair_scores_by_group
+        self.discrete_fair_score_map_by_group = discrete_fair_scores_by_group
 
         # Implementation parameters
         self.random_generator = random_generator
@@ -117,7 +117,7 @@ class FAIM:
         if not isinstance(thetas, dict):
             thetas = {group: thetas for group in sensitive_groups}
 
-        self.discrete_fair_scores_by_group: dict[Any, NDArray[np.float64]] = {}
+        self.discrete_fair_score_map_by_group: dict[Any, NDArray[np.float64]] = {}
         for sensitive_group in sensitive_groups:
             group_mus = np.stack(
                 (mu_a_per_group[sensitive_group], mu_b_per_group[sensitive_group], mu_c_per_group[sensitive_group]),
@@ -130,7 +130,7 @@ class FAIM:
                 weights=thetas[sensitive_group],
             )
 
-            self.discrete_fair_scores_by_group[sensitive_group] = self._fill_discrete_fair_score_map(
+            self.discrete_fair_score_map_by_group[sensitive_group] = self._fill_discrete_fair_score_map(
                 self._get_discrete_fair_score_map(
                     scores=y_scores,
                     fair_score_distribution=faim_barycenter,
@@ -149,7 +149,7 @@ class FAIM:
         discretized_fair_y_scores = deepcopy(discretized_y_scores)
         for sensitive_group in np.unique(sensitive_features):
             group_score_mask = sensitive_features == sensitive_group
-            discretized_fair_y_scores[group_score_mask] = self.discrete_fair_scores_by_group[sensitive_group][
+            discretized_fair_y_scores[group_score_mask] = self.discrete_fair_score_map_by_group[sensitive_group][
                 discretized_y_score_indices[group_score_mask]
             ]
 

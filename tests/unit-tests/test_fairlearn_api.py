@@ -29,33 +29,34 @@ class TestFAIM:
         # THEN FAIM type is returned
         assert isinstance(faim, FAIM)
 
-        # THEN the score maps are roughly equal
-        #  (the underlying EMD calculation seems to vary from platform to platform so check statistics match up
-        #   and scores are roughly equal)
-        assert isinstance(faim.discrete_fair_scores_by_group, dict)
-        assert np.mean(faim.discrete_fair_scores_by_group[0]) == 0.6114896617718844
-        assert np.mean(faim.discrete_fair_scores_by_group[1]) == 0.306273794305943
+        # THEN the score maps are roughly equal (unfortunately they vary slightly from platform to platfrom)
+        assert isinstance(faim.discrete_fair_score_map_by_group, dict)
 
-        rtol = 1e-3
+        rtol_score_elements = 1e-3
+        rtol_mean_score = rtol_score_elements / np.sqrt(len(faim.discrete_fair_score_map_by_group[0]))
+
+        assert np.isclose(faim.discrete_fair_score_map_by_group[0].mean(), 0.61148966, rtol=rtol_mean_score)
+        assert np.isclose(faim.discrete_fair_score_map_by_group[1].mean(), 0.30627379, rtol=rtol_mean_score)
+
         assert np.allclose(
-            faim.discrete_fair_scores_by_group[0][:5],
+            faim.discrete_fair_score_map_by_group[0][:5],
             np.array([0.333111, 0.338481, 0.343851, 0.349222, 0.354592]),
-            rtol=rtol,
+            rtol=rtol_score_elements,
         )
         assert np.allclose(
-            faim.discrete_fair_scores_by_group[0][-5:],
+            faim.discrete_fair_score_map_by_group[0][-5:],
             np.array([0.82734, 0.83122597, 0.83812917, 0.84419487, 0.85026057]),
-            rtol=rtol,
+            rtol=rtol_score_elements,
         )
         assert np.allclose(
-            faim.discrete_fair_scores_by_group[1][:5],
+            faim.discrete_fair_score_map_by_group[1][:5],
             np.array([0.040875, 0.042148, 0.043421, 0.044694, 0.045967]),
-            rtol=rtol,
+            rtol=rtol_score_elements,
         )
         assert np.allclose(
-            faim.discrete_fair_scores_by_group[1][-5:],
+            faim.discrete_fair_score_map_by_group[1][-5:],
             np.array([0.9299756, 0.93525, 0.93820437, 0.94205291, 0.94590145]),
-            rtol=rtol,
+            rtol=rtol_score_elements,
         )
 
     def test_compute_calibrated_scores(self) -> None:
