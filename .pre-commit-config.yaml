@@ -77,7 +77,7 @@ repos:
 #    hooks:
 #      - id: mypy
 #        name: mypy
-#        entry: mypy -p continuous_kleinberg --strict --pretty --show-error-codes --namespace-packages
+#        entry: mypy -p faim --strict --pretty --show-error-codes --namespace-packages
 #        types: [ python ]
 #        language: system
 #        pass_filenames: false

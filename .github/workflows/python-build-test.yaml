@@ -19,8 +19,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-20.04]
-        python: [3.8.2, 3.12.2]
+        os: [windows-latest, ubuntu-latest]
+        python: [3.9, 3.12]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -29,16 +29,6 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python }}
-
-    - name: Validate version
-      run: |
-        $pythonVersion = (python --version)
-        if ("Python ${{ matrix.python }}" -ne "$pythonVersion"){
-          Write-Host "The current version is $pythonVersion; expected version is ${{ matrix.python }}"
-          exit 1
-        }
-        $pythonVersion
-      shell: pwsh
 
     - name: Build Package
       run: |

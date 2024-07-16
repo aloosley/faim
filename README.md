@@ -9,19 +9,19 @@ Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/22
 is a post-processing algorithm for achieving a combination of group-fairness criteria
 (equalized false positive rates, equalized false negative rates, group calibration).
 
-**This README.md is under construction!**
+🚧 **This README.md is under construction!** 🚧
 
-## Installation
+## Getting Started
 
 ### Environment
-Ensure you have a environment with Python>=3.8 and pip>=2.21, preferably by creating a virtual environment.
+Ensure you have a environment with Python>=3.9, preferably by creating a virtual environment.
 
 One way to do this is using [miniconda](https://docs.conda.io/en/latest/miniconda.html).  Install miniconda following
 the instructions on [this page](https://docs.conda.io/en/latest/miniconda.html)
 and create a python 3.10 environment:
 
 ```bash
-conda create -n faim python=3.10
+conda create -n faim python=3.12
 ```
 
 Activate the environment
@@ -29,35 +29,39 @@ Activate the environment
 conda activate faim
 ```
 
-Check that versions of python are >=3.8 and >=2.21, respectively:
+Check that the version of python running comes from the faim environment:
 ```bash
-python --version
-pip --version
+which python
 ```
 
-### Python Package
-If you intend to develop the package and/or contribute, follow the install instructions in the
+### Installation
+There are two implementations of FAIM in the FAIM package, one is the origianl research code
+which can be used to reproduce all experimental results and figures from the paper.  The other is
+a revamped implementation designed to be merged into [Fairlearn](fairlearn.org).  This section covers both.
+
+Note, if you intend to develop the package and/or contribute, follow the install instructions in the
 [Development Environment](#development-environment) section below instead.  Otherwise, follow these instructions.
 
-The package and experiment CLI can be installed with pip:
+
+#### Fairlearn Implementation
+As of 16.07.2024, this is a work in progress that will stabilize once the code is merged with Fairlearn,
+in which case this section will be obsolete.  But to use the current version of FAIM to post-process
+your scores to fairer scores, simply install FAIM as follows and scroll down
+to the [Usage](#usage) section for instructions on how to use the FAIM Fairlearn API.
+
+```commandline
+pip install faim
+```
+
+
+#### Paper Implementation
+
+The package and experiment CLI used to reproduce all the results in the [paper](https://arxiv.org/abs/2212.00469)
+can be installed with:
 ```bash
 pip install "faim[experiment]"
 ```
 
-Note the `[experiment]` notation is required for now since, for the moment, the algorithm can only be run in experiment
-mode for recreating experimental results in the [paper](https://arxiv.org/abs/2212.00469).
-In the future, `faim` will be made available for post-processing classifier scores
-(given ground truth and group information), going beyond reproducing paper experiments.
-
-
-
-### Removal
-From the environment where you installed the package, run
-```bash
-pip uninstall faim
-```
-
-### Latex
 Many of the figures are rendered with LaTeX (via Matplotlib) and require latex be installed.
 
 See [this Matplotlib documentation page](https://matplotlib.org/stable/users/explain/text/usetex.html#text-rendering-with-latex) for instructions.
@@ -66,21 +70,79 @@ If you're on a Mac, you can install the LaTeX distribution MacTeX using [brew ca
 ```bash
 brew install --cask mactex
 ```
-Don't forget to restart your terminal before using the `faim` CLI.
+
+### Removal
+From the environment where you installed the package, run
+```bash
+pip uninstall faim
+```
+
 
 ## Usage
-### Calculate Your Own FAIM Scores
-See [notebooks/faim-scores-example.ipynb](notebooks/faim-scores-example.ipynb) for an example of
-calculating faim scores.
+### Fairlearn Implementation
+> ⚠️ **WARNING** ⚠️
+>
+> The goal is to merge the code into the [Fairlearn](https://fairlearn.org/) library making it available under
+the post-processing submodule. This version of the code is being prepared for a pull request into the
+[Fairlearn](https://fairlearn.org/) and should be considered **unstable** and subject to change as we
+prepare and test this new implementation. Use with caution! If stability is important and you do not want to wait
+to use FAIM, consider using the [Paper Implementation](#paper-implementation) for now.
 
-We would love to see this algorithm integrated into [fairlearn](https://fairlearn.org/), and would
-also consider integrating it ourselves if there is community demand for FAIM.
+In FAIM, the user chooses via hyperparameter `theta` how to balance between otherwise
+mutually exclusive fairness criteria.
 
-### Recreate Experimental Results from Paper
+FAIM currently supports three fairness criteria:
+
+1. Calibration between groups (scores actually correspond to probability of positive)
+1. Balance for the negative class (average score of truly negative individuals equal across groups)
+1. Balance for the positive class (average score of truly positive individuals equal across groups)
+
+The sections below show a usage example using the Fairlearn implementation of FAIM, which
+can also be run via [notebooks/fairlearn-api.ipynb](notebooks/faim-scores-example.ipynb) .
+
+
+#### Data
+Load some test data.
+```python
+import pandas as pd
+
+synthetic_data_from_paper = pd.read_csv(
+    "https://raw.githubusercontent.com/MilkaLichtblau/faim/main/data/synthetic/2groups/2022-01-12/dataset.csv"
+)
+
+y_scores = synthetic_data_from_paper.pred_score
+y_scores = (y_scores - y_scores.min())/(y_scores.max() - y_scores.min())
+y_ground_truth = synthetic_data_from_paper.groundTruthLabel.astype(bool)
+sensitive_features = synthetic_data_from_paper.group
+```
+Note above, the scores above are normalized between 0 and 1 because FAIM expects this to be able calculate
+meaningful fair score distributions (don't worry, FAIM will raise an error if non normalized scores are passed).
+
+#### Fit
+Now fit a FAIM model that maps scores between a balance of one or more of the three fairness criteria above (below
+a balance between calibration and balance for the negative class is used for example purposes):
+
+```python
+from faim.fairlearn_api import FAIM
+
+thetas = [1/2, 1/2, 0]  # balance between calibration and balance for the negative class
+faim = FAIM(thetas=thetas)
+faim.fit(y_scores, y_ground_truth, sensitive_features)
+```
+
+#### Predict
+To map new scores with the fitted faim model, use the predict method:
+```python
+faim.predict(y_scores, sensitive_features)
+```
+
+
+### Paper Implementation
 This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).
 
 Ensure the package has been installed with `[experiment]` extra requirements before continuing
-(see [Installation | Python Package](#python-package))!
+(see [Installation | Paper Implementation](#python-package))!  Don't forget to restart your terminal before
+using the `faim` CLI in the steps below.
 
 #### Prepare Data
 The CLI can be used to prepare any of the three datasets used in the [paper](https://arxiv.org/abs/2212.00469):
