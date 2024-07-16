@@ -32,31 +32,31 @@ class TestFAIM:
         # THEN the score maps are roughly equal (unfortunately they vary slightly from platform to platfrom)
         assert isinstance(faim.discrete_fair_score_map_by_group, dict)
 
-        rtol_score_elements = 1e-3
-        rtol_mean_score = rtol_score_elements / np.sqrt(len(faim.discrete_fair_score_map_by_group[0]))
+        atol_score_elements = 1e-3
+        atol_mean_score = atol_score_elements / np.sqrt(len(faim.discrete_fair_score_map_by_group[0]))
 
-        assert np.isclose(faim.discrete_fair_score_map_by_group[0].mean(), 0.6115, rtol=rtol_mean_score)
-        assert np.isclose(faim.discrete_fair_score_map_by_group[1].mean(), 0.3063, rtol=rtol_mean_score)
+        assert np.isclose(faim.discrete_fair_score_map_by_group[0].mean(), 0.6115, atol=atol_mean_score)
+        assert np.isclose(faim.discrete_fair_score_map_by_group[1].mean(), 0.3063, atol=atol_mean_score)
 
         assert np.allclose(
             faim.discrete_fair_score_map_by_group[0][:5],
             np.array([0.333111, 0.338481, 0.343851, 0.349222, 0.354592]),
-            rtol=rtol_score_elements,
+            atol=atol_score_elements,
         )
         assert np.allclose(
             faim.discrete_fair_score_map_by_group[0][-5:],
             np.array([0.82734, 0.83122597, 0.83812917, 0.84419487, 0.85026057]),
-            rtol=rtol_score_elements,
+            atol=atol_score_elements,
         )
         assert np.allclose(
             faim.discrete_fair_score_map_by_group[1][:5],
             np.array([0.040875, 0.042148, 0.043421, 0.044694, 0.045967]),
-            rtol=rtol_score_elements,
+            atol=atol_score_elements,
         )
         assert np.allclose(
             faim.discrete_fair_score_map_by_group[1][-5:],
             np.array([0.9299756, 0.93525, 0.93820437, 0.94205291, 0.94590145]),
-            rtol=rtol_score_elements,
+            atol=atol_score_elements,
         )
 
     def test_compute_calibrated_scores(self) -> None:
