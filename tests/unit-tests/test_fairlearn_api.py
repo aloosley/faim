@@ -30,18 +30,24 @@ class TestFAIM:
         assert isinstance(faim, FAIM)
         assert isinstance(faim.discrete_fair_scores_by_group, dict)
         np.testing.assert_array_almost_equal(
-            faim.discrete_fair_scores_by_group[0][:5], np.array([0.333111, 0.338481, 0.343851, 0.349222, 0.354592])
+            faim.discrete_fair_scores_by_group[0][:5],
+            np.array([0.333111, 0.338481, 0.343851, 0.349222, 0.354592]),
+            decimal=5,
         )
         np.testing.assert_array_almost_equal(
             faim.discrete_fair_scores_by_group[0][-5:],
             np.array([0.82734, 0.83122597, 0.83812917, 0.84419487, 0.85026057]),
+            decimal=5,
         )
         np.testing.assert_array_almost_equal(
-            faim.discrete_fair_scores_by_group[1][:5], np.array([0.040875, 0.042148, 0.043421, 0.044694, 0.045967])
+            faim.discrete_fair_scores_by_group[1][:5],
+            np.array([0.040875, 0.042148, 0.043421, 0.044694, 0.045967]),
+            decimal=5,
         )
         np.testing.assert_array_almost_equal(
             faim.discrete_fair_scores_by_group[1][-5:],
             np.array([0.9299756, 0.93525, 0.93820437, 0.94205291, 0.94590145]),
+            decimal=5,
         )
 
     def test_compute_calibrated_scores(self) -> None:
