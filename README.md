@@ -9,7 +9,7 @@ Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/22
 is a post-processing algorithm for achieving a combination of group-fairness criteria
 (equalized false positive rates, equalized false negative rates, group calibration).
 
-**This README.md is under construction!**
+🚧 **This README.md is under construction!** 🚧
 
 ## Getting Started
 
@@ -80,6 +80,14 @@ pip uninstall faim
 
 ## Usage
 ### Fairlearn Implementation
+> ⚠️ **WARNING** ⚠️
+>
+> The goal is to merge the code into the [Fairlearn](https://fairlearn.org/) library making it available under
+the post-processing submodule. This version of the code is being prepared for a pull request into the
+[Fairlearn](https://fairlearn.org/) and should be considered **unstable** and subject to change as we
+prepare and test this new implementation. Use with caution! If stability is important and you do not want to wait
+to use FAIM, consider using the [Paper Implementation](#paper-implementation) for now.
+
 In FAIM, the user chooses via hyperparameter `theta` how to balance between otherwise
 mutually exclusive fairness criteria.
 
@@ -89,8 +97,11 @@ FAIM currently supports three fairness criteria:
 1. Balance for the negative class (average score of truly negative individuals equal across groups)
 1. Balance for the positive class (average score of truly positive individuals equal across groups)
 
-Here is an example.
+The sections below show a usage example using the Fairlearn implementation of FAIM, which
+can also be run via [notebooks/fairlearn-api.ipynb](notebooks/faim-scores-example.ipynb) .
 
+
+#### Data
 Load some test data.
 ```python
 import pandas as pd
@@ -107,7 +118,8 @@ sensitive_features = synthetic_data_from_paper.group
 Note above, the scores above are normalized between 0 and 1 because FAIM expects this to be able calculate
 meaningful fair score distributions (don't worry, FAIM will raise an error if non normalized scores are passed).
 
-Now train a FAIM model that maps scores between a balance of one or more of the three fairness criteria above (below
+#### Fit
+Now fit a FAIM model that maps scores between a balance of one or more of the three fairness criteria above (below
 a balance between calibration and balance for the negative class is used for example purposes):
 
 ```python
@@ -118,11 +130,12 @@ faim = FAIM(thetas=thetas)
 faim.fit(y_scores, y_ground_truth, sensitive_features)
 ```
 
-See [notebooks/fairlearn-api.ipynb](notebooks/faim-scores-example.ipynb) for more examples.
+#### Predict
+To map new scores with the fitted faim model, use the predict method:
+```python
+faim.predict(y_scores, sensitive_features)
+```
 
-Be advsised, this code is subject to change as we prepare a [Fairlearn](https://fairlearn.org/) pull request.
-The goal is to merge the code into the [Fairlearn](https://fairlearn.org/) library making it available under
-the post-processing submodule.
 
 ### Paper Implementation
 This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).
