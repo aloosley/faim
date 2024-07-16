@@ -30,9 +30,12 @@ class TestFAIM:
         assert isinstance(faim, FAIM)
 
         # THEN the score maps are roughly equal
-        #  (the underlying EMD calculation seems to vary from platform to platform so check modes match up and scores
-        #   are roughly equal)
+        #  (the underlying EMD calculation seems to vary from platform to platform so check statistics match up
+        #   and scores are roughly equal)
         assert isinstance(faim.discrete_fair_scores_by_group, dict)
+        assert np.mean(faim.discrete_fair_scores_by_group[0]) == 0.6114896617718844
+        assert np.mean(faim.discrete_fair_scores_by_group[1]) == 0.306273794305943
+
         rtol = 1e-3
         assert np.allclose(
             faim.discrete_fair_scores_by_group[0][:5],
