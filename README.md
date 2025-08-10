@@ -6,8 +6,8 @@
 # FAIM
 
 FAIM (FAir Interpolation Method)
-is a post-processing algorithm for achieving a combination of group-fairness criteria
-(equalized false positive rates, equalized false negative rates, group calibration).
+is a post-processing algorithm that can be used to balance between different group-fairness criteria.
+At the moment, three group-fairness criteria have been implemented: equalized false positive rates, equalized false negative rates, and group calibration.  See our [paper](#citing) for more details.
 
 ## Citing
 This work was [published in 2025](https://www.sciencedirect.com/science/article/pii/S0004370224002169) in the Journal of Artificial Intelligence.  If you use FAIM or use ideas from this work to develop your own algorithms, please cite the paper:
