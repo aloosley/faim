@@ -73,7 +73,7 @@ pip install faim
 
 #### Paper Implementation
 
-The package and experiment CLI used to reproduce all the results in the [paper](https://arxiv.org/abs/2212.00469)
+The package and experiment CLI used to reproduce all the results in the [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169)
 can be installed with:
 ```bash
 pip install "faim[experiment]"
@@ -155,14 +155,14 @@ faim.predict(y_scores, sensitive_features)
 
 
 ### Paper Implementation
-This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).
+This section contains information for reproducing experiments in our [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169).
 
 Ensure the package has been installed with `[experiment]` extra requirements before continuing
 (see [Installation | Paper Implementation](#python-package))!  Don't forget to restart your terminal before
 using the `faim` CLI in the steps below.
 
 #### Prepare Data
-The CLI can be used to prepare any of the three datasets used in the [paper](https://arxiv.org/abs/2212.00469):
+The CLI can be used to prepare any of the three datasets used in the [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169):
 ```bash
 faim-experiment --prepare-data DATASET
 ```
@@ -210,7 +210,7 @@ desired amount of the three fairness criteria that the system should achieve:
 Note, as discussed in the paper, thetas = 1,1,1 does not indicate that the system will simultaneously achieve all
 three (mutually incompatible) fairness criteria, but rather the result will be a compromise between all three.
 
-See the [paper](https://arxiv.org/abs/2212.00469) for more details.
+See the [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169) for more details.
 
 Finally, `PREPARED_DATA_FILEPATH` corresponds to the filepath of the prepared data.
 
