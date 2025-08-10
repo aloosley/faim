@@ -5,11 +5,26 @@
 
 # FAIM
 
-FAIM (FAir Interpolation Method), described in
-[Beyond Incompatibility: Interpolation between Mutually
-Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/2212.00469),
-is a post-processing algorithm for achieving a combination of group-fairness criteria
-(equalized false positive rates, equalized false negative rates, group calibration).
+FAIM (FAir Interpolation Method)
+is a post-processing algorithm that can be used to balance between different group-fairness criteria.
+At the moment, three group-fairness criteria have been implemented: equalized false positive rates, equalized false negative rates, and group calibration.  See our [paper](#citing) for more details.
+
+## Citing
+This work was [published in 2025](https://www.sciencedirect.com/science/article/pii/S0004370224002169) in the Journal of Artificial Intelligence.  If you use FAIM or use ideas from this work to develop your own algorithms, please cite the paper:
+
+```bibtex
+@article{ZEHLIKE2025104280,
+  title = {Beyond incompatibility: Trade-offs between mutually exclusive fairness criteria in machine learning and law},
+  journal = {Artificial Intelligence},
+  volume = {340},
+  pages = {104280},
+  year = {2025},
+  issn = {0004-3702},
+  doi = {https://doi.org/10.1016/j.artint.2024.104280},
+  url = {https://www.sciencedirect.com/science/article/pii/S0004370224002169},
+  author = {Meike Zehlike and Alex Loosley and Håkan Jonsson and Emil Wiedemann and Philipp Hacker}
+}
+```
 
 🚧 **This README.md is under construction!** 🚧
 
@@ -58,7 +73,7 @@ pip install faim
 
 #### Paper Implementation
 
-The package and experiment CLI used to reproduce all the results in the [paper](https://arxiv.org/abs/2212.00469)
+The package and experiment CLI used to reproduce all the results in the [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169)
 can be installed with:
 ```bash
 pip install "faim[experiment]"
@@ -140,14 +155,14 @@ faim.predict(y_scores, sensitive_features)
 
 
 ### Paper Implementation
-This section contains information for reproducing experiments in our [paper](https://arxiv.org/abs/2212.00469).
+This section contains information for reproducing experiments in our [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169).
 
 Ensure the package has been installed with `[experiment]` extra requirements before continuing
 (see [Installation | Paper Implementation](#python-package))!  Don't forget to restart your terminal before
 using the `faim` CLI in the steps below.
 
 #### Prepare Data
-The CLI can be used to prepare any of the three datasets used in the [paper](https://arxiv.org/abs/2212.00469):
+The CLI can be used to prepare any of the three datasets used in the [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169):
 ```bash
 faim-experiment --prepare-data DATASET
 ```
@@ -195,7 +210,7 @@ desired amount of the three fairness criteria that the system should achieve:
 Note, as discussed in the paper, thetas = 1,1,1 does not indicate that the system will simultaneously achieve all
 three (mutually incompatible) fairness criteria, but rather the result will be a compromise between all three.
 
-See the [paper](https://arxiv.org/abs/2212.00469) for more details.
+See the [paper](https://www.sciencedirect.com/science/article/pii/S0004370224002169) for more details.
 
 Finally, `PREPARED_DATA_FILEPATH` corresponds to the filepath of the prepared data.
 
