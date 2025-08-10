@@ -5,11 +5,26 @@
 
 # FAIM
 
-FAIM (FAir Interpolation Method), described in
-[Beyond Incompatibility: Interpolation between Mutually
-Exclusive Fairness Criteria in Classification Problems](https://arxiv.org/abs/2212.00469),
+FAIM (FAir Interpolation Method)
 is a post-processing algorithm for achieving a combination of group-fairness criteria
 (equalized false positive rates, equalized false negative rates, group calibration).
+
+## Citing
+This work was [published in 2025](https://www.sciencedirect.com/science/article/pii/S0004370224002169) in the Journal of Artificial Intelligence.  If you use FAIM or use ideas from this work to develop your own algorithms, please cite the paper:
+
+```bibtex
+@article{ZEHLIKE2025104280,
+  title = {Beyond incompatibility: Trade-offs between mutually exclusive fairness criteria in machine learning and law},
+  journal = {Artificial Intelligence},
+  volume = {340},
+  pages = {104280},
+  year = {2025},
+  issn = {0004-3702},
+  doi = {https://doi.org/10.1016/j.artint.2024.104280},
+  url = {https://www.sciencedirect.com/science/article/pii/S0004370224002169},
+  author = {Meike Zehlike and Alex Loosley and Håkan Jonsson and Emil Wiedemann and Philipp Hacker}
+}
+```
 
 🚧 **This README.md is under construction!** 🚧
 
